@@ -1,6 +1,9 @@
 import Image from "next/image";
+import { redirect } from "next/navigation";
 import LoginForm from "@/components/login/loginForm";
 import WaveEdge from "@/components/login/waveEdge";
+import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
 
 const LINKS = {
   facebook: "https://www.facebook.com/smkassalamgegesik2003",
@@ -39,7 +42,19 @@ function Sosmed({ dark = false }: { dark?: boolean }) {
   );
 }
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  // Sudah login DAN akunnya masih ada di database → langsung ke panel admin.
+  // Kalau cookie masih ada tapi akunnya sudah dihapus, form tetap ditampilkan
+  // (mencegah redirect bolak-balik antara /login dan /admin).
+  const session = await getSession();
+  if (session) {
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { id: true },
+    });
+    if (user) redirect("/admin");
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-white md:flex-row">
       {/* ===== HP: header hijau ===== */}

@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum Sumber {
+  PEMBELIAN
+  MOU
+  BANTUAN
+  LAMA
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  nama      String
+  email     String   @unique
+  password  String   // hash bcrypt, jangan simpan teks asli
+  createdAt DateTime @default(now())
+}
+
+// Tempat barang ditempatkan, misal Bengkel Motor (PJ: Suhardi)
+model Lokasi {
+  id              Int      @id @default(autoincrement())
+  nama            String   @unique
+  penanggungJawab String?
+  createdAt       DateTime @default(now())
+
+  barang Barang[]
+}
+
+model Barang {
+  id        Int      @id @default(autoincrement())
+  nama      String
+  satuan    String   // Pcs, Set, Unit, Buah
+  lokasiId  Int
+  createdAt DateTime @default(now())
+
+  lokasi          Lokasi           @relation(fields: [lokasiId], references: [id])
+  penambahan      Penambahan[]
+  pengecekanItems PengecekanItem[]
+
+  @@unique([nama, lokasiId]) // nama sama boleh, asal beda lokasi
+  @@index([lokasiId])
+}
+
+model Mitra {
+  id        Int      @id @default(autoincrement())
+  nama      String   @unique
+  kontak    String?
+  createdAt DateTime @default(now())
+
+  penambahan Penambahan[]
+}
+
+// Setiap kejadian barang masuk. Jumlah seharusnya = total jumlah di sini.
+model Penambahan {
+  id         Int      @id @default(autoincrement())
+  barangId   Int
+  tanggal    DateTime
+  jumlah     Int
+  sumber     Sumber
+  mitraId    Int?     // diisi jika sumber MOU atau BANTUAN
+  harga      Int?     // harga per satuan, diisi jika sumber PEMBELIAN (rupiah)
+  keterangan String?
+  createdAt  DateTime @default(now())
+
+  barang Barang @relation(fields: [barangId], references: [id])
+  mitra  Mitra? @relation(fields: [mitraId], references: [id], onDelete: SetNull)
+
+  @@index([barangId])
+  @@index([tanggal])
+  @@index([sumber])
+}
+
+// 1x per bulan, dijaga di kode (server action)
+model Pengecekan {
+  id        Int      @id @default(autoincrement())
+  tanggal   DateTime
+  petugas   String   // nama petugas, diketik manual
+  catatan   String?
+  createdAt DateTime @default(now())
+
+  items PengecekanItem[]
+
+  @@index([tanggal])
+}
+
+model PengecekanItem {
+  id           Int     @id @default(autoincrement())
+  pengecekanId Int
+  barangId     Int
+  jumlahAda    Int     // semua yang fisiknya ditemukan
+  jumlahRusak  Int     @default(0) // bagian dari jumlahAda yang rusak
+  keterangan   String?
+
+  pengecekan Pengecekan @relation(fields: [pengecekanId], references: [id], onDelete: Cascade)
+  barang     Barang     @relation(fields: [barangId], references: [id])
+
+  @@unique([pengecekanId, barangId])
+}

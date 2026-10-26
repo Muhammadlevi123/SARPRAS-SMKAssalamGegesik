@@ -1,0 +1,1 @@
+export const BG_KONTEN = "#eef4f0";
