@@ -22,6 +22,15 @@ model User {
   createdAt DateTime @default(now())
 }
 
+// Tahun ajaran diatur admin. Hanya tanggal mulai yang disimpan;
+// selesainya = sehari sebelum tahun ajaran berikutnya mulai.
+model TahunAjaran {
+  id        Int      @id @default(autoincrement())
+  nama      String   @unique // "2026/2027"
+  mulai     DateTime @unique // misal 13 Juli 2026
+  createdAt DateTime @default(now())
+}
+
 // Tempat barang ditempatkan, misal Bengkel Motor (PJ: Suhardi)
 model Lokasi {
   id              Int      @id @default(autoincrement())
@@ -29,22 +38,29 @@ model Lokasi {
   penanggungJawab String?
   createdAt       DateTime @default(now())
 
-  barang Barang[]
+  barang     Barang[]
+  pengecekan Pengecekan[]
 }
 
 model Barang {
   id        Int      @id @default(autoincrement())
+  kode      String?  @unique // kode inventaris, misal BM-001 (opsional)
   nama      String
+  merk      String?  // misal Lenovo, Asus, Tekiro
+  kategori  String?  // Perkakas Tangan, Alat Ukur, Furnitur, dll.
   satuan    String   // Pcs, Set, Unit, Buah
   lokasiId  Int
   createdAt DateTime @default(now())
 
-  lokasi          Lokasi           @relation(fields: [lokasiId], references: [id])
-  penambahan      Penambahan[]
+  lokasi          Lokasi            @relation(fields: [lokasiId], references: [id])
+  masukItems      BarangMasukItem[]
   pengecekanItems PengecekanItem[]
 
-  @@unique([nama, lokasiId]) // nama sama boleh, asal beda lokasi
+  // Nama sama boleh, asal beda merk atau beda lokasi.
+  // (Untuk barang tanpa merk, pengecekan duplikat dilakukan di kode)
+  @@unique([nama, merk, lokasiId])
   @@index([lokasiId])
+  @@index([kategori])
 }
 
 model Mitra {
@@ -53,52 +69,81 @@ model Mitra {
   kontak    String?
   createdAt DateTime @default(now())
 
-  penambahan Penambahan[]
+  barangMasuk BarangMasuk[]
 }
 
-// Setiap kejadian barang masuk. Jumlah seharusnya = total jumlah di sini.
-model Penambahan {
+// Satu kejadian barang masuk = satu nota / satu dokumen serah terima
+model BarangMasuk {
   id         Int      @id @default(autoincrement())
-  barangId   Int
   tanggal    DateTime
-  jumlah     Int
   sumber     Sumber
+  noNota     String?  // no. nota / no. transaksi / no. BAST (opsional)
   mitraId    Int?     // diisi jika sumber MOU atau BANTUAN
-  harga      Int?     // harga per satuan, diisi jika sumber PEMBELIAN (rupiah)
+  foto       String?  // nama file foto nota, HANYA untuk sumber PEMBELIAN
+  // Biaya di luar barang, HANYA untuk PEMBELIAN. Minus = potongan. Contoh:
+  // [{ "nama": "Ongkos kirim", "jumlah": 20000 }, { "nama": "Diskon ongkir", "jumlah": -20000 }]
+  biayaLain  Json?
   keterangan String?
   createdAt  DateTime @default(now())
 
-  barang Barang @relation(fields: [barangId], references: [id])
-  mitra  Mitra? @relation(fields: [mitraId], references: [id], onDelete: SetNull)
+  mitra Mitra?            @relation(fields: [mitraId], references: [id], onDelete: SetNull)
+  items BarangMasukItem[]
 
-  @@index([barangId])
   @@index([tanggal])
   @@index([sumber])
 }
 
-// 1x per bulan, dijaga di kode (server action)
+// Barang-barang di dalam satu nota.
+// Jumlah seharusnya sebuah barang = total jumlah di tabel ini.
+model BarangMasukItem {
+  id            Int  @id @default(autoincrement())
+  barangMasukId Int
+  barangId      Int
+  jumlah        Int
+  harga         Int? // harga satuan (rupiah), diisi jika sumber PEMBELIAN
+
+  barangMasuk BarangMasuk @relation(fields: [barangMasukId], references: [id], onDelete: Cascade)
+  barang      Barang      @relation(fields: [barangId], references: [id])
+
+  @@index([barangMasukId])
+  @@index([barangId])
+}
+
 model Pengecekan {
   id        Int      @id @default(autoincrement())
+  lokasiId  Int
   tanggal   DateTime
-  petugas   String   // nama petugas, diketik manual
+  petugas   String   // default: penanggung jawab lokasi
   catatan   String?
   createdAt DateTime @default(now())
 
-  items PengecekanItem[]
+  lokasi Lokasi           @relation(fields: [lokasiId], references: [id])
+  items  PengecekanItem[]
 
+  @@index([lokasiId, tanggal])
   @@index([tanggal])
 }
 
+// Baik   = jumlahAda - rusakRingan - rusakBerat   (dihitung, tidak disimpan)
+// Hilang = jumlah seharusnya - jumlahAda          (dihitung, tidak disimpan)
+// Di layar, rusakRingan ditampilkan sebagai "Kurang Baik" (sesuai istilah sekolah)
 model PengecekanItem {
   id           Int     @id @default(autoincrement())
   pengecekanId Int
   barangId     Int
   jumlahAda    Int     // semua yang fisiknya ditemukan
-  jumlahRusak  Int     @default(0) // bagian dari jumlahAda yang rusak
+  rusakRingan  Int     @default(0) // "Kurang Baik", bagian dari jumlahAda
+  rusakBerat   Int     @default(0) // bagian dari jumlahAda
   keterangan   String?
 
   pengecekan Pengecekan @relation(fields: [pengecekanId], references: [id], onDelete: Cascade)
   barang     Barang     @relation(fields: [barangId], references: [id])
 
   @@unique([pengecekanId, barangId])
+}
+
+model PeriodePengecekan {
+  id        Int      @id @default(autoincrement())
+  bulan     DateTime @unique // tanggal 1 bulan tersebut, jam 00:00 WIB
+  createdAt DateTime @default(now())
 }

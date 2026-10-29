@@ -190,3 +190,5 @@ yarn-error.log*
 next-env.d.ts
 
 /generated/prisma
+
+/uploads

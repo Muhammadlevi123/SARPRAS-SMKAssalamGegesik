@@ -1,16 +1,11 @@
+
 @import "tailwindcss";
-
-@theme {
-  --color-brand-50: #f0fdf4;
-  --color-brand-300: #86efac;
-  --color-brand-500: #22c55e;
-  --color-brand-600: #16a34a;
-  --color-brand-700: #15803d;
-  --color-brand-800: #166534;
-  --color-brand-900: #14532d;
-}
-
-body {
-  background: #ffffff;
-  color: #111827;
+@media print {
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+  .print-putih {
+    background: #fff !important;
+  }
 }

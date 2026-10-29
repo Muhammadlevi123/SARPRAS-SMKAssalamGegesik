@@ -11,13 +11,43 @@ CREATE TABLE `User` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Barang` (
+CREATE TABLE `TahunAjaran` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `nama` VARCHAR(191) NOT NULL,
-    `satuan` VARCHAR(191) NOT NULL,
+    `mulai` DATETIME(3) NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
-    UNIQUE INDEX `Barang_nama_key`(`nama`),
+    UNIQUE INDEX `TahunAjaran_nama_key`(`nama`),
+    UNIQUE INDEX `TahunAjaran_mulai_key`(`mulai`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Lokasi` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `nama` VARCHAR(191) NOT NULL,
+    `penanggungJawab` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    UNIQUE INDEX `Lokasi_nama_key`(`nama`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Barang` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `kode` VARCHAR(191) NULL,
+    `nama` VARCHAR(191) NOT NULL,
+    `merk` VARCHAR(191) NULL,
+    `kategori` VARCHAR(191) NULL,
+    `satuan` VARCHAR(191) NOT NULL,
+    `lokasiId` INTEGER NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    UNIQUE INDEX `Barang_kode_key`(`kode`),
+    INDEX `Barang_lokasiId_idx`(`lokasiId`),
+    INDEX `Barang_kategori_idx`(`kategori`),
+    UNIQUE INDEX `Barang_nama_lokasiId_key`(`nama`, `lokasiId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -33,20 +63,32 @@ CREATE TABLE `Mitra` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Penambahan` (
+CREATE TABLE `BarangMasuk` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `barangId` INTEGER NOT NULL,
     `tanggal` DATETIME(3) NOT NULL,
-    `jumlah` INTEGER NOT NULL,
     `sumber` ENUM('PEMBELIAN', 'MOU', 'BANTUAN', 'LAMA') NOT NULL,
+    `noNota` VARCHAR(191) NULL,
     `mitraId` INTEGER NULL,
-    `harga` INTEGER NULL,
+    `foto` VARCHAR(191) NULL,
     `keterangan` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
-    INDEX `Penambahan_barangId_idx`(`barangId`),
-    INDEX `Penambahan_tanggal_idx`(`tanggal`),
-    INDEX `Penambahan_sumber_idx`(`sumber`),
+    INDEX `BarangMasuk_tanggal_idx`(`tanggal`),
+    INDEX `BarangMasuk_sumber_idx`(`sumber`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `BarangMasukItem` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `barangMasukId` INTEGER NOT NULL,
+    `barangId` INTEGER NOT NULL,
+    `jumlah` INTEGER NOT NULL,
+    `harga` INTEGER NULL,
+    `spesifikasi` VARCHAR(191) NULL,
+
+    INDEX `BarangMasukItem_barangMasukId_idx`(`barangMasukId`),
+    INDEX `BarangMasukItem_barangId_idx`(`barangId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -54,13 +96,11 @@ CREATE TABLE `Penambahan` (
 CREATE TABLE `Pengecekan` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `tanggal` DATETIME(3) NOT NULL,
-    `bulan` INTEGER NOT NULL,
-    `tahunAjaran` VARCHAR(191) NOT NULL,
     `petugas` VARCHAR(191) NOT NULL,
     `catatan` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
-    INDEX `Pengecekan_tahunAjaran_bulan_idx`(`tahunAjaran`, `bulan`),
+    INDEX `Pengecekan_tanggal_idx`(`tanggal`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -69,9 +109,9 @@ CREATE TABLE `PengecekanItem` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `pengecekanId` INTEGER NOT NULL,
     `barangId` INTEGER NOT NULL,
-    `rasio` INTEGER NOT NULL,
     `jumlahAda` INTEGER NOT NULL,
-    `jumlahRusak` INTEGER NOT NULL DEFAULT 0,
+    `rusakRingan` INTEGER NOT NULL DEFAULT 0,
+    `rusakBerat` INTEGER NOT NULL DEFAULT 0,
     `keterangan` VARCHAR(191) NULL,
 
     UNIQUE INDEX `PengecekanItem_pengecekanId_barangId_key`(`pengecekanId`, `barangId`),
@@ -79,10 +119,16 @@ CREATE TABLE `PengecekanItem` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
-ALTER TABLE `Penambahan` ADD CONSTRAINT `Penambahan_barangId_fkey` FOREIGN KEY (`barangId`) REFERENCES `Barang`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Barang` ADD CONSTRAINT `Barang_lokasiId_fkey` FOREIGN KEY (`lokasiId`) REFERENCES `Lokasi`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Penambahan` ADD CONSTRAINT `Penambahan_mitraId_fkey` FOREIGN KEY (`mitraId`) REFERENCES `Mitra`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `BarangMasuk` ADD CONSTRAINT `BarangMasuk_mitraId_fkey` FOREIGN KEY (`mitraId`) REFERENCES `Mitra`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `BarangMasukItem` ADD CONSTRAINT `BarangMasukItem_barangMasukId_fkey` FOREIGN KEY (`barangMasukId`) REFERENCES `BarangMasuk`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `BarangMasukItem` ADD CONSTRAINT `BarangMasukItem_barangId_fkey` FOREIGN KEY (`barangId`) REFERENCES `Barang`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `PengecekanItem` ADD CONSTRAINT `PengecekanItem_pengecekanId_fkey` FOREIGN KEY (`pengecekanId`) REFERENCES `Pengecekan`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

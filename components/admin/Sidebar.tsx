@@ -11,8 +11,8 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* ===== HP: bar atas dengan tombol menu ===== */}
-      <div className="sticky top-0 z-30 flex items-center justify-between bg-green-900 px-4 py-3 text-white md:hidden">
+      {/* ===== HP: bar atas dengan tombol menu (disembunyikan saat dicetak) ===== */}
+      <div className="sticky top-0 z-30 flex items-center justify-between bg-green-900 px-4 py-3 text-white md:hidden print:hidden">
         <div className="flex items-center gap-2">
           <Image src="/img/logo_w.png" alt="Logo" width={32} height={32} className="size-8 object-contain" />
           <span className="font-[family-name:var(--font-display)] text-lg font-bold">SARPRAS</span>
@@ -30,12 +30,12 @@ export default function Sidebar() {
       </div>
 
       {/* Latar gelap saat menu HP terbuka */}
-      {buka && <div className="fixed inset-0 z-40 bg-black/40 md:hidden" onClick={tutup} />}
+      {buka && <div className="fixed inset-0 z-40 bg-black/40 md:hidden print:hidden" onClick={tutup} />}
 
-      {/* ===== Sidebar =====
+      {/* ===== Sidebar (disembunyikan saat dicetak) =====
           Sengaja hanya padding kiri (pl-4), supaya menu aktif bisa menempel ke tepi kanan */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-green-900 pb-6 pl-4 pt-6 text-white transition-transform duration-200 md:sticky md:top-0 md:h-screen md:translate-x-0 ${
+        className={`print:hidden fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-green-900 pb-6 pl-4 pt-6 text-white transition-transform duration-200 md:sticky md:top-0 md:h-screen md:translate-x-0 ${
           buka ? "translate-x-0" : "-translate-x-full"
         }`}
       >

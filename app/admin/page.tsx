@@ -1,9 +1,7 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
-
-const fmt = (n: number) => n.toLocaleString("id-ID");
-const tglPanjang = (d: Date) =>
-  d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+import { fmtAngka, fmtBulan, kodeBulan, rentangBulan } from "@/lib/format";
 
 function KartuRingkas({
   label,
@@ -42,26 +40,35 @@ function KartuRingkas({
 export default async function AdminPage() {
   await requireUser();
 
-  const now = new Date();
-  const awalBulan = new Date(now.getFullYear(), now.getMonth(), 1);
-  const awalBulanDepan = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const namaBulan = now.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+  const sekarang = new Date();
 
-  const [jenisBarang, unit, totalLokasi, cekTerakhir, cekBulanIni] = await Promise.all([
+  const [jenisBarang, unit, lokasiList, cekBulanIni, cekTerbaru] = await Promise.all([
     prisma.barang.count(),
-    prisma.penambahan.aggregate({ _sum: { jumlah: true } }),
-    prisma.lokasi.count(),
-    prisma.pengecekan.findFirst({
+    prisma.barangMasukItem.aggregate({ _sum: { jumlah: true } }),
+    prisma.lokasi.findMany({ select: { id: true, _count: { select: { barang: true } } } }),
+    prisma.pengecekan.findMany({ where: { tanggal: rentangBulan(sekarang) }, select: { lokasiId: true } }),
+    // Pengecekan terbaru dulu, nanti diambil yang paling akhir per lokasi
+    prisma.pengecekan.findMany({
       orderBy: { tanggal: "desc" },
-      include: { items: { select: { jumlahRusak: true } } },
-    }),
-    prisma.pengecekan.findFirst({
-      where: { tanggal: { gte: awalBulan, lt: awalBulanDepan } },
+      take: 1000,
+      select: { lokasiId: true, items: { select: { rusakRingan: true, rusakBerat: true } } },
     }),
   ]);
 
   const totalUnit = unit._sum.jumlah ?? 0;
-  const totalRusak = cekTerakhir?.items.reduce((s, i) => s + i.jumlahRusak, 0) ?? 0;
+
+  // Barang rusak = kurang baik + rusak berat dari pengecekan terakhir tiap lokasi
+  const sudahDihitung = new Set<number>();
+  let totalRusak = 0;
+  for (const c of cekTerbaru) {
+    if (sudahDihitung.has(c.lokasiId)) continue;
+    sudahDihitung.add(c.lokasiId);
+    totalRusak += c.items.reduce((s, i) => s + i.rusakRingan + i.rusakBerat, 0);
+  }
+
+  const lokasiBerbarang = lokasiList.filter((l) => l._count.barang > 0).length;
+  const selesai = new Set(cekBulanIni.map((c) => c.lokasiId)).size;
+  const persen = lokasiBerbarang ? Math.round((selesai / lokasiBerbarang) * 100) : 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -69,41 +76,38 @@ export default async function AdminPage() {
       <section className="rounded-3xl border border-green-100 bg-white/70 p-5 shadow-sm">
         <h2 className="mb-4 font-semibold text-gray-800">Ringkasan</h2>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KartuRingkas label="Jenis Barang" nilai={fmt(jenisBarang)} ikon="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8" />
-          <KartuRingkas label="Total Unit" nilai={fmt(totalUnit)} ikon="M4 7h16M4 12h16M4 17h10" />
-          <KartuRingkas label="Lokasi" nilai={fmt(totalLokasi)} ikon="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z" />
-          <KartuRingkas label="Barang Rusak" nilai={fmt(totalRusak)} ikon="M12 9v4M12 17h.01M10.3 3.9L2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" bahaya />
+          <KartuRingkas label="Jenis Barang" nilai={fmtAngka(jenisBarang)} ikon="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8" />
+          <KartuRingkas label="Total Unit" nilai={fmtAngka(totalUnit)} ikon="M4 7h16M4 12h16M4 17h10" />
+          <KartuRingkas label="Lokasi" nilai={fmtAngka(lokasiList.length)} ikon="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z" />
+          <KartuRingkas
+            label="Barang Kurang Baik / Rusak"
+            nilai={fmtAngka(totalRusak)}
+            ikon="M12 9v4M12 17h.01M10.3 3.9L2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"
+            bahaya
+          />
         </div>
       </section>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Status pengecekan bulan ini */}
-        <section className="rounded-3xl border border-green-100 bg-white p-5 shadow-sm">
-          <h2 className="font-semibold text-gray-800">Pengecekan {namaBulan}</h2>
-          {cekBulanIni ? (
-            <div className="mt-4">
-              <span className="inline-block rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">
-                Sudah dicek
-              </span>
-              <p className="mt-3 text-sm text-gray-600">
-                {tglPanjang(cekBulanIni.tanggal)} oleh <b>{cekBulanIni.petugas}</b>
-              </p>
-            </div>
-          ) : (
-            <div className="mt-4">
-              <span className="inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
-                Belum dicek
-              </span>
-              <p className="mt-3 text-sm text-gray-600">
-                Pengecekan bulan ini belum dilakukan.
-              </p>
-            </div>
-          )}
+        {/* Progres pengecekan bulan ini */}
+        <section className="flex flex-col rounded-3xl border border-green-100 bg-white p-5 shadow-sm">
+          <h2 className="font-semibold capitalize text-gray-800">Pengecekan {fmtBulan(sekarang)}</h2>
+          <p className="mt-3 text-3xl font-bold text-gray-900">
+            {selesai} <span className="text-base font-semibold text-gray-400">/ {lokasiBerbarang} lokasi</span>
+          </p>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-100">
+            <div className="h-full rounded-full bg-green-600" style={{ width: `${persen}%` }} />
+          </div>
+          <Link
+            href={`/admin/pengecekan?bulan=${kodeBulan(sekarang)}`}
+            className="mt-4 text-sm font-semibold text-green-700 hover:underline"
+          >
+            {selesai < lokasiBerbarang ? "Lanjutkan pengecekan →" : "Lihat hasil pengecekan →"}
+          </Link>
         </section>
 
-        {/* Tempat grafik (diisi setelah ada data) */}
         <section className="grid place-items-center rounded-3xl border-2 border-dashed border-green-200 p-5 text-center text-sm text-gray-400 lg:col-span-2">
-          Grafik kondisi barang (Baik / Rusak / Hilang) muncul setelah ada pengecekan
+          Grafik kondisi barang (Baik / Kurang Baik / Rusak Berat / Hilang) muncul setelah ada pengecekan
         </section>
       </div>
 
