@@ -14,20 +14,38 @@ enum Sumber {
   LAMA
 }
 
+// ADMIN : semua fitur + Kelola User + Kelola Tahun Ajaran
+// USER  : fitur harian (data master, barang masuk, pengecekan, laporan, pengajuan)
+enum Role {
+  ADMIN
+  USER
+}
+
+// Akun hasil register sendiri.
+// USER baru bisa login setelah admin memasangkan lokasi (lokasiId terisi).
+// ADMIN tidak butuh lokasi.
 model User {
   id        Int      @id @default(autoincrement())
   nama      String
   email     String   @unique
   password  String   // hash bcrypt, jangan simpan teks asli
+  role      Role     @default(USER)
+  lokasiId  Int?     // lokasi tanggung jawab; kosong = menunggu ditetapkan admin
   createdAt DateTime @default(now())
+
+  lokasi    Lokasi?     @relation(fields: [lokasiId], references: [id], onDelete: SetNull)
+  pengajuan Pengajuan[]
+
+  @@index([lokasiId])
 }
 
-// Tahun ajaran diatur admin. Hanya tanggal mulai yang disimpan;
-// selesainya = sehari sebelum tahun ajaran berikutnya mulai.
+// Tahun ajaran diatur admin, misal 2026/2027: 13 Juli 2026 – 30 Juni 2027.
+// Nama dibuat otomatis dari tahun mulai & tahun selesai.
 model TahunAjaran {
   id        Int      @id @default(autoincrement())
   nama      String   @unique // "2026/2027"
-  mulai     DateTime @unique // misal 13 Juli 2026
+  mulai     DateTime @unique
+  selesai   DateTime
   createdAt DateTime @default(now())
 }
 
@@ -35,24 +53,41 @@ model TahunAjaran {
 model Lokasi {
   id              Int      @id @default(autoincrement())
   nama            String   @unique
-  penanggungJawab String?
+  penanggungJawab String?  // nama PJ (teks), masih dipakai di laporan
   createdAt       DateTime @default(now())
 
   barang     Barang[]
   pengecekan Pengecekan[]
+  users      User[]      // akun yang memegang lokasi ini
+  pengajuan  Pengajuan[]
+}
+
+// Kategori barang + bagian kode barang. Contoh: Elektronik = ELK
+// Bertambah otomatis dari form Barang (kategori baru langsung tersimpan di sini)
+// Kode barang: ASG-[kode]-[tahun 2 digit]-[no urut 4 digit] → ASG-ELK-26-0012
+model Kategori {
+  id         Int      @id @default(autoincrement())
+  nama       String   @unique
+  kode       String   @unique @db.VarChar(3)
+  noTerakhir Int      @default(0) // no urut terakhir yang PERNAH dipakai (tidak pernah turun)
+  createdAt  DateTime @default(now())
+
+  barang Barang[]
 }
 
 model Barang {
-  id        Int      @id @default(autoincrement())
-  kode      String?  @unique // kode inventaris, misal BM-001 (opsional)
-  nama      String
-  merk      String?  // misal Lenovo, Asus, Tekiro
-  kategori  String?  // Perkakas Tangan, Alat Ukur, Furnitur, dll.
-  satuan    String   // Pcs, Set, Unit, Buah
-  lokasiId  Int
-  createdAt DateTime @default(now())
+  id             Int      @id @default(autoincrement())
+  kode           String   @unique // ASG-ELK-26-0012, dibuat otomatis
+  nama           String
+  merk           String?  // misal Lenovo, Asus, Tekiro
+  kategoriId     Int
+  tahunPerolehan Int      // bagian kode barang
+  satuan         String   // Pcs, Set, Unit, Buah
+  lokasiId       Int
+  createdAt      DateTime @default(now())
 
   lokasi          Lokasi            @relation(fields: [lokasiId], references: [id])
+  kategori        Kategori          @relation(fields: [kategoriId], references: [id])
   masukItems      BarangMasukItem[]
   pengecekanItems PengecekanItem[]
 
@@ -60,7 +95,7 @@ model Barang {
   // (Untuk barang tanpa merk, pengecekan duplikat dilakukan di kode)
   @@unique([nama, merk, lokasiId])
   @@index([lokasiId])
-  @@index([kategori])
+  @@index([kategoriId])
 }
 
 model Mitra {
@@ -113,7 +148,7 @@ model Pengecekan {
   id        Int      @id @default(autoincrement())
   lokasiId  Int
   tanggal   DateTime
-  petugas   String   // default: penanggung jawab lokasi
+  petugas   String   // diisi manual oleh yang mengecek
   catatan   String?
   createdAt DateTime @default(now())
 
@@ -142,8 +177,41 @@ model PengecekanItem {
   @@unique([pengecekanId, barangId])
 }
 
+// Bulan pengecekan yang ditambahkan admin (masuk ke tahun ajaran sesuai tanggalnya)
 model PeriodePengecekan {
   id        Int      @id @default(autoincrement())
   bulan     DateTime @unique // tanggal 1 bulan tersebut, jam 00:00 WIB
   createdAt DateTime @default(now())
+}
+
+// Pengajuan barang dari user untuk lokasinya, seperti pesan:
+// daftar barang yang diminta + alasan umum. Tanggal otomatis dari createdAt.
+model Pengajuan {
+  id        Int      @id @default(autoincrement())
+  lokasiId  Int      // untuk lokasi mana
+  userId    Int?     // yang mengajukan; kosong jika akunnya sudah dihapus
+  alasan    String   @db.Text
+  createdAt DateTime @default(now())
+
+  lokasi Lokasi          @relation(fields: [lokasiId], references: [id])
+  user   User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items  PengajuanItem[]
+
+  @@index([lokasiId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// Barang yang diminta dalam satu pengajuan (ketik bebas)
+model PengajuanItem {
+  id          Int     @id @default(autoincrement())
+  pengajuanId Int
+  nama        String  // misal "Kunci torsi"
+  merk        String?
+  jumlah      Int
+  satuan      String  // Pcs, Set, Unit, Buah
+
+  pengajuan Pengajuan @relation(fields: [pengajuanId], references: [id], onDelete: Cascade)
+
+  @@index([pengajuanId])
 }

@@ -10,9 +10,11 @@ import { tambahBarangMasuk } from "@/app/admin/barang-masuk/actions";
 import type { FormState } from "@/lib/formState";
 import { btnPrimary, btnSecondary, inputClass, labelClass } from "@/components/admin/ui";
 import { DAFTAR_SUMBER, SUMBER_LABEL, fmtRupiah, type SumberKode } from "@/lib/format";
+import { formatKode, usulKodeKategori } from "@/lib/kodeBarang";
 
-type BarangOpsi = { id: number; nama: string; merk: string | null; satuan: string; lokasi: string };
+type BarangOpsi = { id: number; kode: string; nama: string; merk: string | null; satuan: string; lokasi: string };
 type Opsi = { id: number; nama: string };
+type KategoriOpsi = { nama: string; kode: string; noTerakhir: number };
 
 type Baris = {
   key: number;
@@ -84,7 +86,7 @@ export default function BarangMasukForm({
   barangList: BarangOpsi[];
   lokasiList: Opsi[];
   mitraList: Opsi[];
-  kategoriList: string[];
+  kategoriList: KategoriOpsi[];
   satuanList: string[];
   merkList: string[];
   namaBiayaList: string[];
@@ -103,6 +105,7 @@ export default function BarangMasukForm({
   const [prosesFoto, setProsesFoto] = useState(false);
 
   const pembelian = sumber === "PEMBELIAN";
+  const barangLama = sumber === "LAMA";
   const butuhMitra = sumber === "MOU" || sumber === "BANTUAN";
 
   // ===== Barang =====
@@ -110,17 +113,37 @@ export default function BarangMasukForm({
     setBaris((bs) => bs.map((b) => (b.key === key ? { ...b, ...data } : b)));
   const hapusBaris = (key: number) => setBaris((bs) => (bs.length > 1 ? bs.filter((b) => b.key !== key) : bs));
 
-  // Nama · merk di baris utama, lokasi di baris kecil di bawahnya
+  // Nama · merk di baris utama, lokasi · kode di baris kecil di bawahnya
   const opsiBarang = barangList.map((b) => ({
     value: String(b.id),
     label: b.merk ? `${b.nama} · ${b.merk}` : b.nama,
-    keterangan: b.lokasi,
+    keterangan: `${b.lokasi} · ${b.kode}`,
   }));
   const opsiLokasi = lokasiList.map((l) => ({ value: String(l.id), label: l.nama }));
+  const opsiKategori = kategoriList.map((k) => k.nama);
 
   const satuanBaris = (b: Baris) =>
     b.mode === "baru" ? b.satuan : barangList.find((x) => String(x.id) === b.barangId)?.satuan ?? "";
   const subtotal = (b: Baris) => (Number(b.jumlah) || 0) * (Number(b.harga) || 0);
+
+  // ===== Pratinjau kode barang baru =====
+  // Tahun perolehan = tahun tanggal nota. Nomor = nomor terakhir kategori + urutan di nota ini.
+  const tahunNota = Number(tanggal.slice(0, 4));
+  const kodeTerpakai = new Set(kategoriList.map((k) => k.kode));
+
+  function pratinjauKode(b: Baris, index: number) {
+    const nama = b.kategori.trim().toLowerCase();
+    if (b.mode !== "baru" || !nama || !tahunNota) return "";
+
+    const kategori = kategoriList.find((k) => k.nama.toLowerCase() === nama);
+    const kodeKategori = kategori?.kode ?? usulKodeKategori(b.kategori, kodeTerpakai);
+    // Barang baru sebelumnya di nota ini dengan kategori yang sama
+    const sebelumnya = baris
+      .slice(0, index)
+      .filter((x) => x.mode === "baru" && x.kategori.trim().toLowerCase() === nama).length;
+
+    return formatKode(kodeKategori, tahunNota, (kategori?.noTerakhir ?? 0) + sebelumnya + 1);
+  }
 
   // ===== Biaya lain-lain =====
   const ubahBiaya = (key: number, data: Partial<BarisBiaya>) =>
@@ -136,7 +159,7 @@ export default function BarangMasukForm({
   // ===== Foto =====
   async function pilihFoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    e.target.value = "";
+    e.target.value = ""; // supaya file yang sama bisa dipilih ulang
     if (!file) return;
     if (!file.type.startsWith("image/")) return toast("File harus berupa foto/gambar", "gagal");
     if (file.size > 10 * 1024 * 1024) return toast("Ukuran foto maksimal 10 MB", "gagal");
@@ -205,7 +228,7 @@ export default function BarangMasukForm({
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{state.error}</div>
       )}
 
-      {/* ===== Data Nota ===== */}
+      {/* ===== Data Nota (lebar penuh) ===== */}
       <section className="rounded-3xl border border-green-100 bg-white p-5 shadow-sm">
         <h3 className="mb-4 font-semibold text-gray-900">Data Nota</h3>
 
@@ -216,36 +239,57 @@ export default function BarangMasukForm({
               {DAFTAR_SUMBER.map((s) => (
                 <label
                   key={s}
-                  className={`cursor-pointer rounded-xl border px-3 py-2.5 text-center text-sm font-semibold transition ${sumber === s
+                  className={`cursor-pointer rounded-xl border px-3 py-2.5 text-center text-sm font-semibold transition ${
+                    sumber === s
                       ? "border-green-600 bg-green-50 text-green-800 ring-2 ring-green-500/20"
                       : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                    }`}
+                  }`}
                 >
-                  <input type="radio" name="sumber" value={s} checked={sumber === s} onChange={() => setSumber(s)} className="sr-only" />
+                  <input
+                    type="radio"
+                    name="sumber"
+                    value={s}
+                    checked={sumber === s}
+                    onChange={() => setSumber(s)}
+                    className="sr-only"
+                  />
                   {SUMBER_LABEL[s]}
                 </label>
               ))}
             </div>
           </fieldset>
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className={`grid gap-4 ${barangLama ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
             <div className="flex flex-col gap-2">
               <label htmlFor="tanggal" className={labelClass}>Tanggal</label>
-              <input id="tanggal" name="tanggal" type="date" required value={tanggal} onChange={(e) => setTanggal(e.target.value)} className={inputClass} />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="noNota" className={labelClass}>
-                {pembelian ? "No. Nota" : "No. Dokumen / BAST"} {opsional}
-              </label>
               <input
-                id="noNota"
-                name="noNota"
-                value={noNota}
-                onChange={(e) => setNoNota(e.target.value)}
-                placeholder={pembelian ? "2505199TGS5R6K" : "BAST/001/2026"}
+                id="tanggal"
+                name="tanggal"
+                type="date"
+                required
+                value={tanggal}
+                onChange={(e) => setTanggal(e.target.value)}
                 className={inputClass}
               />
             </div>
+
+            {/* Barang Lama tidak punya dokumen penerimaan */}
+            {!barangLama && (
+              <div className="flex flex-col gap-2">
+                <label htmlFor="noNota" className={labelClass}>
+                  {pembelian ? "No. Nota" : "No. Dokumen / BAST"} {opsional}
+                </label>
+                <input
+                  id="noNota"
+                  name="noNota"
+                  value={noNota}
+                  onChange={(e) => setNoNota(e.target.value)}
+                  placeholder={pembelian ? "2505199TGS5R6K" : "BAST/001/2026"}
+                  className={inputClass}
+                />
+              </div>
+            )}
+
             <div className="flex flex-col gap-2">
               <label htmlFor="keterangan" className={labelClass}>Keterangan {opsional}</label>
               <input
@@ -253,7 +297,7 @@ export default function BarangMasukForm({
                 name="keterangan"
                 value={keterangan}
                 onChange={(e) => setKeterangan(e.target.value)}
-                placeholder="Contoh: Dana BOS tahap 2"
+                placeholder={barangLama ? "Contoh: Inventaris awal tahun 2024" : "Contoh: Dana BOS tahap 2"}
                 className={inputClass}
               />
             </div>
@@ -279,6 +323,7 @@ export default function BarangMasukForm({
             </div>
           )}
 
+          {/* Foto nota: hanya untuk Pembelian */}
           {pembelian && (
             <div className="flex flex-col gap-2 md:max-w-md">
               <span className={labelClass}>Foto nota {opsional}</span>
@@ -301,10 +346,19 @@ export default function BarangMasukForm({
                     <path d="M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
                   </svg>
                   <span className="text-sm">
-                    <span className="font-semibold text-gray-700">{prosesFoto ? "Memproses foto..." : "Pilih / ambil foto nota"}</span>
+                    <span className="font-semibold text-gray-700">
+                      {prosesFoto ? "Memproses foto..." : "Pilih / ambil foto nota"}
+                    </span>
                     <span className="block text-xs text-gray-400">Maks. 10 MB, otomatis dikecilkan</span>
                   </span>
-                  <input type="file" accept="image/*" capture="environment" onChange={pilihFoto} disabled={prosesFoto} className="sr-only" />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={pilihFoto}
+                    disabled={prosesFoto}
+                    className="sr-only"
+                  />
                 </label>
               )}
             </div>
@@ -326,8 +380,10 @@ export default function BarangMasukForm({
         <div className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-3">
           {baris.map((b, i) => {
             const satuan = satuanBaris(b);
+            const kodeBaru = pratinjauKode(b, i);
             return (
               <div key={b.key} className="flex flex-col gap-2 rounded-2xl border border-gray-200 bg-gray-50/50 p-3">
+                {/* Kepala kartu */}
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wide text-green-800">Barang #{i + 1}</span>
                   <button
@@ -344,6 +400,7 @@ export default function BarangMasukForm({
                   </button>
                 </div>
 
+                {/* Barang terdaftar / barang baru */}
                 {b.mode === "ada" ? (
                   <Select
                     id={`barang-${b.key}`}
@@ -389,8 +446,9 @@ export default function BarangMasukForm({
                       name={`x-kategori-${b.key}`}
                       value={b.kategori}
                       onChange={(v) => ubah(b.key, { kategori: v })}
-                      opsi={kategoriList}
-                      placeholder="Kategori (opsional)"
+                      opsi={opsiKategori}
+                      placeholder="Kategori"
+                      required
                     />
                     <Combobox
                       id={`merk-${b.key}`}
@@ -400,9 +458,20 @@ export default function BarangMasukForm({
                       opsi={merkList}
                       placeholder="Merk (opsional)"
                     />
+
+                    {/* Pratinjau kode barang (otomatis, readonly) */}
+                    <p className="rounded-lg bg-white px-2.5 py-1.5 text-xs text-gray-500 ring-1 ring-gray-200">
+                      Kode:{" "}
+                      {kodeBaru ? (
+                        <b className="font-mono text-gray-800">{kodeBaru}</b>
+                      ) : (
+                        <span className="text-gray-400">isi kategori dulu</span>
+                      )}
+                    </p>
                   </>
                 )}
 
+                {/* Jumlah & harga */}
                 <div className={`grid gap-2 ${pembelian ? "grid-cols-2" : ""}`}>
                   <div className="flex flex-col gap-1">
                     <label htmlFor={`jumlah-${b.key}`} className={labelKecil}>
@@ -435,6 +504,7 @@ export default function BarangMasukForm({
                   )}
                 </div>
 
+                {/* Kaki kartu */}
                 <div className="mt-auto flex items-center justify-between gap-2 pt-1">
                   <button
                     type="button"
@@ -451,6 +521,7 @@ export default function BarangMasukForm({
             );
           })}
 
+          {/* Kartu untuk menambah barang */}
           <button
             type="button"
             onClick={() => setBaris((bs) => [...bs, barisKosong()])}
@@ -506,12 +577,13 @@ export default function BarangMasukForm({
                           onClick={() => ubahBiaya(b.key, { tanda: t })}
                           aria-label={t === "+" ? "Tambahan" : "Potongan"}
                           title={t === "+" ? "Tambahan" : "Potongan"}
-                          className={`w-10 rounded-lg ${b.tanda === t
+                          className={`w-10 rounded-lg ${
+                            b.tanda === t
                               ? t === "+"
                                 ? "bg-green-700 text-white"
                                 : "bg-red-600 text-white"
                               : "text-gray-500 hover:bg-gray-50"
-                            }`}
+                          }`}
                         >
                           {t === "+" ? "+" : "−"}
                         </button>

@@ -3,9 +3,9 @@
 import { useState } from "react";
 import Image from "next/image";
 import NavLinks from "./NavLinks";
-import { logout } from "@/app/admin/actions";
+import MenuProfil from "./MenuProfil";
 
-export default function Sidebar() {
+export default function Sidebar({ user }: { user: { nama: string; email: string } }) {
   const [buka, setBuka] = useState(false);
   const tutup = () => setBuka(false);
 
@@ -50,9 +50,7 @@ export default function Sidebar() {
               className="size-9 object-contain"
             />
             <div>
-              <p className="font-[family-name:var(--font-display)] text-base font-bold leading-tight">
-                SARPRAS
-              </p>
+              <p className="font-[family-name:var(--font-display)] text-base font-bold leading-tight">SARPRAS</p>
               <p className="text-[10px] text-white/55">SMK Assalam Gegesik</p>
             </div>
           </div>
@@ -73,18 +71,8 @@ export default function Sidebar() {
           <NavLinks onNavigate={tutup} />
         </div>
 
-        {/* Keluar */}
-        <form action={logout} className="pr-4">
-          <button
-            type="submit"
-            className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-white/75 transition hover:bg-white/10 hover:text-white"
-          >
-            <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 16l-4-4 4-4M6 12h10" />
-            </svg>
-            Keluar
-          </button>
-        </form>
+        {/* Profil: Kelola User, Kelola Tahun Ajaran, Keluar */}
+        <MenuProfil nama={user.nama} email={user.email} onNavigate={tutup} />
       </aside>
     </>
   );

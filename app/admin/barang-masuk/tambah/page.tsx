@@ -10,19 +10,15 @@ import { bacaBiayaLain, hariIniInput } from "@/lib/format";
 export default async function TambahBarangMasukPage() {
   await requireUser();
 
-  const [barang, lokasiList, mitraList, kategoriRows, satuanRows, merkRows, notaBeli] = await Promise.all([
+  const [barang, lokasiList, mitraList, kategoriList, satuanRows, merkRows, notaBeli] = await Promise.all([
     prisma.barang.findMany({
       include: { lokasi: { select: { nama: true } } },
       orderBy: [{ nama: "asc" }, { lokasi: { nama: "asc" } }],
     }),
     prisma.lokasi.findMany({ orderBy: { nama: "asc" }, select: { id: true, nama: true } }),
     prisma.mitra.findMany({ orderBy: { nama: "asc" }, select: { id: true, nama: true } }),
-    prisma.barang.findMany({
-      where: { kategori: { not: null } },
-      distinct: ["kategori"],
-      select: { kategori: true },
-      orderBy: { kategori: "asc" },
-    }),
+    // Kategori + kodenya (untuk pilihan & pratinjau kode barang baru)
+    prisma.kategori.findMany({ orderBy: { nama: "asc" }, select: { nama: true, kode: true, noTerakhir: true } }),
     prisma.barang.findMany({ distinct: ["satuan"], select: { satuan: true }, orderBy: { satuan: "asc" } }),
     prisma.barang.findMany({
       where: { merk: { not: null } },
@@ -47,7 +43,7 @@ export default async function TambahBarangMasukPage() {
     <div>
       <PageHeader
         judul="Catat Barang Masuk"
-        deskripsi="Satu nota bisa berisi banyak barang. Barang baru otomatis ditambahkan ke daftar Barang."
+        deskripsi="Satu nota bisa berisi banyak barang. Barang baru otomatis ditambahkan ke daftar Barang beserta kodenya."
       />
 
       {lokasiList.length === 0 ? (
@@ -56,10 +52,17 @@ export default async function TambahBarangMasukPage() {
         </EmptyState>
       ) : (
         <BarangMasukForm
-          barangList={barang.map((b) => ({ id: b.id, nama: b.nama, merk: b.merk, satuan: b.satuan, lokasi: b.lokasi.nama }))}
+          barangList={barang.map((b) => ({
+            id: b.id,
+            kode: b.kode,
+            nama: b.nama,
+            merk: b.merk,
+            satuan: b.satuan,
+            lokasi: b.lokasi.nama,
+          }))}
           lokasiList={lokasiList}
           mitraList={mitraList}
-          kategoriList={kategoriRows.map((k) => k.kategori).filter((k): k is string => !!k)}
+          kategoriList={kategoriList}
           satuanList={satuanRows.map((s) => s.satuan)}
           merkList={merkRows.map((m) => m.merk).filter((m): m is string => !!m)}
           namaBiayaList={namaBiayaList}

@@ -6,6 +6,7 @@ import EmptyState from "@/components/admin/EmptyState";
 import Pagination from "@/components/admin/Pagination";
 import SelectFilter from "@/components/admin/SelectFilter";
 import TombolHapus from "@/components/admin/TombolHapus";
+import TombolLihat from "@/components/admin/TombolLihat";
 import { btnPrimary, btnSecondary, inputClass } from "@/components/admin/ui";
 import { PER_HALAMAN, bacaHalaman } from "@/lib/paging";
 import {
@@ -147,6 +148,8 @@ export default async function BarangMasukPage({
                     n.items.reduce((t, it) => t + (it.harga ?? 0) * it.jumlah, 0) +
                     totalBiayaLain(bacaBiayaLain(n.biayaLain));
                   const nama = n.items.map((it) => it.barang.nama);
+                  const label = `Nota ${n.noNota ?? fmtTanggalPendek(n.tanggal)}`;
+
                   return (
                     <tr key={n.id} className="hover:bg-green-50/40">
                       <td className="whitespace-nowrap px-5 py-3 text-gray-600">{fmtTanggalPendek(n.tanggal)}</td>
@@ -186,17 +189,8 @@ export default async function BarangMasukPage({
                       </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center justify-end gap-1">
-                          <Link
-                            href={`/admin/barang-masuk/${n.id}`}
-                            className="rounded-lg px-3 py-1.5 text-sm font-semibold text-green-700 hover:bg-green-50"
-                          >
-                            Detail
-                          </Link>
-                          <TombolHapus
-                            action={hapusBarangMasuk}
-                            id={n.id}
-                            nama={`Nota ${n.noNota ?? fmtTanggalPendek(n.tanggal)}`}
-                          />
+                          <TombolLihat href={`/admin/barang-masuk/${n.id}`} judul={`Lihat ${label}`} />
+                          <TombolHapus action={hapusBarangMasuk} id={n.id} nama={label} />
                         </div>
                       </td>
                     </tr>

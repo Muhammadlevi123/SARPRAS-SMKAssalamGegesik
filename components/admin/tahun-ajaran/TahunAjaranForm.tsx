@@ -2,11 +2,13 @@
 
 import { useActionState, useState } from "react";
 import Modal from "@/components/admin/Modal";
-import { simpanTahunAjaran } from "@/app/admin/pengaturan/actions";
+import { toast } from "@/components/admin/Toaster";
+import { simpanTahunAjaran } from "@/app/admin/tahun-ajaran/actions";
 import type { FormState } from "@/lib/formState";
 import { btnIcon, btnPrimary, btnSecondary, inputClass, labelClass } from "@/components/admin/ui";
 
-type TahunAjaran = { id: number; nama: string; mulai: string }; // mulai: "2026-07-13"
+// Tanggal dalam format input: "2026-07-13"
+type TahunAjaran = { id: number; nama: string; mulai: string; selesai: string };
 
 export default function TahunAjaranForm({ data }: { data?: TahunAjaran }) {
   const [buka, setBuka] = useState(false);
@@ -35,17 +37,20 @@ export default function TahunAjaranForm({ data }: { data?: TahunAjaran }) {
 }
 
 function IsiForm({ data, onSelesai }: { data?: TahunAjaran; onSelesai: () => void }) {
-  const [nama, setNama] = useState(data?.nama ?? "");
   const [mulai, setMulai] = useState(data?.mulai ?? "");
+  const [selesai, setSelesai] = useState(data?.selesai ?? "");
 
-  const [state, formAction, pending] = useActionState(
-    async (prev: FormState, formData: FormData) => {
-      const hasil = await simpanTahunAjaran(prev, formData);
-      if (hasil.ok) onSelesai();
-      return hasil;
-    },
-    {}
-  );
+  // Pratinjau nama otomatis, misal "2026/2027"
+  const nama = mulai && selesai ? `${mulai.slice(0, 4)}/${selesai.slice(0, 4)}` : "–";
+
+  const [state, formAction, pending] = useActionState(async (prev: FormState, formData: FormData) => {
+    const hasil = await simpanTahunAjaran(prev, formData);
+    if (hasil.ok) {
+      toast(hasil.pesan ?? "Tahun ajaran tersimpan", "sukses");
+      onSelesai();
+    }
+    return hasil;
+  }, {});
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -55,35 +60,39 @@ function IsiForm({ data, onSelesai }: { data?: TahunAjaran; onSelesai: () => voi
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{state.error}</div>
       )}
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor="nama" className={labelClass}>Tahun ajaran</label>
-        <input
-          id="nama"
-          name="nama"
-          required
-          autoFocus
-          value={nama}
-          onChange={(e) => setNama(e.target.value)}
-          placeholder="2026/2027"
-          className={inputClass}
-        />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-2">
+          <label htmlFor="mulai" className={labelClass}>Tanggal mulai</label>
+          <input
+            id="mulai"
+            name="mulai"
+            type="date"
+            required
+            autoFocus
+            value={mulai}
+            onChange={(e) => setMulai(e.target.value)}
+            className={inputClass}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="selesai" className={labelClass}>Tanggal selesai</label>
+          <input
+            id="selesai"
+            name="selesai"
+            type="date"
+            required
+            min={mulai || undefined}
+            value={selesai}
+            onChange={(e) => setSelesai(e.target.value)}
+            className={inputClass}
+          />
+        </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor="mulai" className={labelClass}>Tanggal mulai</label>
-        <input
-          id="mulai"
-          name="mulai"
-          type="date"
-          required
-          value={mulai}
-          onChange={(e) => setMulai(e.target.value)}
-          className={inputClass}
-        />
-        <p className="text-xs text-gray-400">
-          Berakhir otomatis sehari sebelum tahun ajaran berikutnya dimulai.
-        </p>
-      </div>
+      <p className="rounded-xl bg-green-50 px-4 py-3 text-sm text-gray-600">
+        Nama tahun ajaran: <b className="text-gray-900">{nama}</b>
+        <span className="block text-xs text-gray-400">Dibuat otomatis dari tahun mulai dan tahun selesai.</span>
+      </p>
 
       <div className="mt-2 flex justify-end gap-3">
         <button type="button" onClick={onSelesai} className={btnSecondary}>Batal</button>

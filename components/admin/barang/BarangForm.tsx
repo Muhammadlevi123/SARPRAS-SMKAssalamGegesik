@@ -1,29 +1,32 @@
 "use client";
 
-import { useActionState, useId, useState } from "react";
+import { useActionState, useId, useMemo, useState } from "react";
 import Modal from "@/components/admin/Modal";
 import Combobox from "@/components/admin/Combobox";
 import Select from "@/components/admin/Select";
 import { toast } from "@/components/admin/Toaster";
 import { simpanBarang } from "@/app/admin/barang/actions";
+import { formatKode, usulKodeKategori } from "@/lib/kodeBarang";
 import type { FormState } from "@/lib/formState";
 import { btnIcon, btnPrimary, btnSecondary, inputClass, labelClass } from "@/components/admin/ui";
 
 type Barang = {
   id: number;
-  kode: string | null;
+  kode: string;
   nama: string;
   merk: string | null;
-  kategori: string | null;
+  kategori: string; // nama kategori
+  tahunPerolehan: number;
   satuan: string;
   lokasiId: number;
 };
 type Opsi = { id: number; nama: string };
+type Kategori = { nama: string; kode: string; noTerakhir: number };
 
 type Props = {
   barang?: Barang;
   lokasiList: Opsi[];
-  kategoriList: string[];
+  kategoriList: Kategori[];
   satuanList: string[];
   merkList: string[];
 };
@@ -70,12 +73,37 @@ function IsiForm({
   onSelesai,
 }: Props & { onSelesai: () => void }) {
   const uid = useId();
-  const [kode, setKode] = useState(barang?.kode ?? "");
+  const tahunIni = new Date().getFullYear();
+
   const [nama, setNama] = useState(barang?.nama ?? "");
   const [merk, setMerk] = useState(barang?.merk ?? "");
   const [kategori, setKategori] = useState(barang?.kategori ?? "");
+  const [kodeKategoriKetik, setKodeKategoriKetik] = useState(""); // diisi manual untuk kategori baru
+  const [tahun, setTahun] = useState(String(barang?.tahunPerolehan ?? tahunIni));
   const [satuan, setSatuan] = useState(barang?.satuan ?? "");
   const [lokasiId, setLokasiId] = useState(String(barang?.lokasiId ?? ""));
+
+  // ===== Kategori & pratinjau kode barang =====
+  const kodeTerpakai = useMemo(() => new Set(kategoriList.map((k) => k.kode)), [kategoriList]);
+  const kategoriAda = kategoriList.find((k) => k.nama.toLowerCase() === kategori.trim().toLowerCase());
+  const kategoriBaru = kategori.trim() !== "" && !kategoriAda;
+
+  const kodeKategori =
+    kategoriAda?.kode ?? (kodeKategoriKetik || (kategoriBaru ? usulKodeKategori(kategori, kodeTerpakai) : ""));
+  const nomorTahun = Number(tahun);
+
+  // Edit tanpa mengganti kategori & tahun → kode tetap
+  const kodeTetap =
+    !!barang &&
+    !!kategoriAda &&
+    kategoriAda.nama.toLowerCase() === barang.kategori.toLowerCase() &&
+    nomorTahun === barang.tahunPerolehan;
+
+  const pratinjau = kodeTetap
+    ? barang!.kode
+    : kodeKategori && nomorTahun >= 1990
+      ? formatKode(kodeKategori, nomorTahun, (kategoriAda?.noTerakhir ?? 0) + 1)
+      : "";
 
   const [state, formAction, pending] = useActionState(
     async (prev: FormState, formData: FormData) => {
@@ -116,18 +144,21 @@ function IsiForm({
         />
       </div>
 
-      {/* Kode & Merk */}
+      {/* Kode (readonly) & Merk */}
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <label htmlFor={`${uid}-kode`} className={labelClass}>Kode {opsional}</label>
+          <label htmlFor={`${uid}-kode`} className={labelClass}>Kode barang</label>
           <input
             id={`${uid}-kode`}
-            name="kode"
-            value={kode}
-            onChange={(e) => setKode(e.target.value)}
-            placeholder="BM-001"
-            className={inputClass}
+            readOnly
+            tabIndex={-1}
+            value={pratinjau}
+            placeholder="Otomatis dari kategori & tahun"
+            className={`${inputClass} cursor-not-allowed bg-gray-50 font-mono text-gray-700`}
           />
+          {!kodeTetap && pratinjau && (
+            <p className="text-xs text-gray-400">Otomatis. Nomor akhir ditentukan saat disimpan.</p>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">
@@ -143,20 +174,71 @@ function IsiForm({
         </div>
       </div>
 
-      {/* Kategori & Satuan */}
+      {/* Kategori & Tahun perolehan */}
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <label htmlFor={`${uid}-kategori`} className={labelClass}>Kategori {opsional}</label>
+          <label htmlFor={`${uid}-kategori`} className={labelClass}>Kategori</label>
           <Combobox
             id={`${uid}-kategori`}
             name="kategori"
             value={kategori}
-            onChange={setKategori}
-            opsi={kategoriList}
+            onChange={(v) => {
+              setKategori(v);
+              setKodeKategoriKetik(""); // kategori berganti → kode usulan dihitung ulang
+            }}
+            opsi={kategoriList.map((k) => k.nama)}
             placeholder="Pilih atau ketik baru"
+            required
           />
         </div>
 
+        <div className="flex flex-col gap-2">
+          <label htmlFor={`${uid}-tahun`} className={labelClass}>Tahun perolehan</label>
+          <input
+            id={`${uid}-tahun`}
+            name="tahun"
+            type="number"
+            required
+            min={1990}
+            max={tahunIni}
+            value={tahun}
+            onChange={(e) => setTahun(e.target.value)}
+            className={inputClass}
+          />
+        </div>
+      </div>
+
+      {/* Kategori baru: kode kategori otomatis, boleh diganti */}
+      {kategoriBaru && (
+        <div className="flex flex-col gap-2 rounded-2xl border border-green-100 bg-green-50/60 p-3">
+          <label htmlFor={`${uid}-kodeKategori`} className={labelClass}>
+            Kode kategori baru <span className="font-normal text-gray-400">(3 huruf)</span>
+          </label>
+          <input
+            id={`${uid}-kodeKategori`}
+            name="kodeKategori"
+            required
+            minLength={3}
+            maxLength={3}
+            value={kodeKategori}
+            onChange={(e) => setKodeKategoriKetik(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))}
+            className={`${inputClass} font-mono uppercase tracking-widest`}
+          />
+          <p className="text-xs text-gray-500">
+            Kategori <b>{kategori.trim()}</b> belum ada dan akan otomatis ditambahkan saat barang disimpan.
+          </p>
+        </div>
+      )}
+
+      {/* Edit: kategori / tahun diganti → kode berubah */}
+      {barang && !kodeTetap && kategori.trim() && (
+        <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Kategori atau tahun diganti, jadi kode barang akan berubah dari <b>{barang.kode}</b>. Label QR lama perlu dicetak ulang.
+        </p>
+      )}
+
+      {/* Satuan & Lokasi */}
+      <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
           <label htmlFor={`${uid}-satuan`} className={labelClass}>Satuan</label>
           <Combobox
@@ -169,20 +251,19 @@ function IsiForm({
             required
           />
         </div>
-      </div>
 
-      {/* Lokasi */}
-      <div className="flex flex-col gap-2">
-        <label htmlFor={`${uid}-lokasi`} className={labelClass}>Lokasi</label>
-        <Select
-          id={`${uid}-lokasi`}
-          name="lokasiId"
-          value={lokasiId}
-          onChange={setLokasiId}
-          opsi={lokasiList.map((l) => ({ value: String(l.id), label: l.nama }))}
-          placeholder="Pilih lokasi"
-          required
-        />
+        <div className="flex flex-col gap-2">
+          <label htmlFor={`${uid}-lokasi`} className={labelClass}>Lokasi</label>
+          <Select
+            id={`${uid}-lokasi`}
+            name="lokasiId"
+            value={lokasiId}
+            onChange={setLokasiId}
+            opsi={lokasiList.map((l) => ({ value: String(l.id), label: l.nama }))}
+            placeholder="Pilih lokasi"
+            required
+          />
+        </div>
       </div>
 
       <div className="mt-2 flex justify-end gap-3">

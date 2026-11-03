@@ -16,7 +16,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen bg-green-900 md:flex print:block print:bg-white">
-      <Sidebar />
+      <Sidebar user={{ nama: user.nama, email: user.email }} />
 
       {/* print-putih: latar jadi putih saat dicetak (diatur di globals.css) */}
       <div

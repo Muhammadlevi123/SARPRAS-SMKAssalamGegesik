@@ -4,25 +4,30 @@ import { rentangTahunKalender } from "@/lib/format";
 
 export type Rentang = { gte: Date; lt?: Date };
 
+const SEHARI = 24 * 60 * 60 * 1000;
+
 export function daftarTahunAjaran() {
   return prisma.tahunAjaran.findMany({ orderBy: { mulai: "desc" } });
 }
 
-// Rentang tanggal sebuah tahun ajaran: dari tanggal mulainya
-// sampai tahun ajaran berikutnya mulai
-export async function rentangTahunAjaran(id: number): Promise<Rentang> {
-  const ta = await prisma.tahunAjaran.findUniqueOrThrow({ where: { id } });
-  const berikut = await prisma.tahunAjaran.findFirst({
-    where: { mulai: { gt: ta.mulai } },
-    orderBy: { mulai: "asc" },
-  });
-  return berikut ? { gte: ta.mulai, lt: berikut.mulai } : { gte: ta.mulai };
+// Rentang tanggal tahun ajaran: dari tanggal mulai sampai akhir hari tanggal selesai
+function rentangDari(ta: { mulai: Date; selesai: Date }): Rentang {
+  return { gte: ta.mulai, lt: new Date(ta.selesai.getTime() + SEHARI) };
 }
 
-// Tahun ajaran yang sedang berjalan
+export async function rentangTahunAjaran(id: number): Promise<Rentang> {
+  const ta = await prisma.tahunAjaran.findUniqueOrThrow({ where: { id } });
+  return rentangDari(ta);
+}
+
+// Tahun ajaran yang sedang berjalan (hari ini ada di antara mulai dan selesai)
 export function tahunAjaranAktif() {
+  const sekarang = new Date();
   return prisma.tahunAjaran.findFirst({
-    where: { mulai: { lte: new Date() } },
+    where: {
+      mulai: { lte: sekarang },
+      selesai: { gt: new Date(sekarang.getTime() - SEHARI) }, // hari terakhir masih dihitung aktif
+    },
     orderBy: { mulai: "desc" },
   });
 }
@@ -43,7 +48,7 @@ export async function resolvePeriode(kode: string | undefined) {
   if (jenis === "ta") {
     const ta = await prisma.tahunAjaran.findUnique({ where: { id: n } });
     if (!ta) return null;
-    return { kode, rentang: await rentangTahunAjaran(n), label: `Tahun Ajaran ${ta.nama}` };
+    return { kode, rentang: rentangDari(ta), label: `Tahun Ajaran ${ta.nama}` };
   }
 
   return null;

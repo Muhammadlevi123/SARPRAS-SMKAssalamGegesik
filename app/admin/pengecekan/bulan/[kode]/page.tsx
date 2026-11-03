@@ -34,13 +34,15 @@ export default async function PengecekanBulanPage({
   const status = sp.status === "belum" || sp.status === "selesai" ? sp.status : "";
   const dasar = `/admin/pengecekan/bulan/${kode}`;
 
-  const [lokasiList, cekBulanIni] = await Promise.all([
+  const rentang = rentangBulan(awal);
+
+  const [lokasiList, cekBulanIni, ta] = await Promise.all([
     prisma.lokasi.findMany({
       orderBy: { nama: "asc" },
       select: { id: true, nama: true, penanggungJawab: true, _count: { select: { barang: true } } },
     }),
     prisma.pengecekan.findMany({
-      where: { tanggal: rentangBulan(awal) },
+      where: { tanggal: rentang },
       select: {
         id: true,
         lokasiId: true,
@@ -48,7 +50,14 @@ export default async function PengecekanBulanPage({
         items: { select: { barangId: true, jumlahAda: true, rusakRingan: true, rusakBerat: true } },
       },
     }),
+    // Tahun ajaran tempat bulan ini berada (untuk keterangan & tombol Kembali)
+    prisma.tahunAjaran.findFirst({
+      where: { mulai: { lt: rentang.lt }, selesai: { gte: rentang.gte } },
+      select: { id: true, nama: true },
+    }),
   ]);
+
+  const kembali = ta ? `/admin/pengecekan?ta=${ta.id}` : "/admin/pengecekan";
 
   const rekapBulan = await rekapKondisi(cekBulanIni);
   const cekPerLokasi = new Map(cekBulanIni.map((c) => [c.lokasiId, c]));
@@ -69,8 +78,8 @@ export default async function PengecekanBulanPage({
     <div>
       <PageHeader
         judul={`Pengecekan ${fmtBulan(awal)}`}
-        deskripsi="Pilih lokasi untuk mulai mengecek atau melihat hasilnya."
-        aksi={<Link href="/admin/pengecekan" className={btnSecondary}>Kembali</Link>}
+        deskripsi={`${ta ? `Tahun Ajaran ${ta.nama} · ` : ""}Pilih lokasi untuk mulai mengecek atau melihat hasilnya.`}
+        aksi={<Link href={kembali} className={btnSecondary}>Kembali</Link>}
       />
 
       {/* Ringkasan kondisi bulan ini */}

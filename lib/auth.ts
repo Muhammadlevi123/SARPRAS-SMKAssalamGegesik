@@ -11,7 +11,14 @@ export const requireUser = cache(async () => {
 
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
-    select: { id: true, nama: true, email: true },
+    select: {
+      id: true,
+      nama: true,
+      email: true,
+      role: true,
+      lokasiId: true, // lokasi tanggung jawab (kosong = belum ditetapkan admin)
+      lokasi: { select: { id: true, nama: true } },
+    },
   });
 
   // Akun sudah dihapus tapi cookie masih ada
@@ -19,3 +26,10 @@ export const requireUser = cache(async () => {
 
   return user;
 });
+
+// Khusus Admin. User biasa yang mencoba membuka halaman/aksi admin dikembalikan ke Dashboard.
+export async function requireAdmin() {
+  const user = await requireUser();
+  if (user.role !== "ADMIN") redirect("/admin");
+  return user;
+}

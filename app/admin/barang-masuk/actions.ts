@@ -5,17 +5,18 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { hapusFotoNota, simpanFotoNota } from "@/lib/fotoNota";
-import { isSumber, parseTanggal, type BiayaLain } from "@/lib/format";
+import { bagianWIB, isSumber, parseTanggal, type BiayaLain } from "@/lib/format";
+import { bersihkanKategoriKosong, buatKodeBarang, usulKodeKategori } from "@/lib/kodeBarang";
 import type { FormState } from "@/lib/formState";
 
 export type HasilSimpanNota = FormState & { id?: number };
 
 type ItemMasuk = {
   mode: "ada" | "baru";
-  barangId: number;
-  nama: string;
+  barangId: number; // untuk mode "ada"
+  nama: string; // untuk mode "baru"
   merk: string | null;
-  kategori: string | null;
+  kategori: string; // untuk mode "baru" (wajib, bagian dari kode barang)
   satuan: string;
   lokasiId: number;
   jumlah: number;
@@ -64,17 +65,18 @@ function bacaItems(json: string, pembelian: boolean): { items?: ItemMasuk[]; err
     if (mode === "ada") {
       const barangId = n(o.barangId);
       if (!Number.isInteger(barangId) || barangId <= 0) return { error: `Barang #${no}: pilih barang` };
-      items.push({ mode, barangId, nama: "", merk: null, kategori: null, satuan: "", lokasiId: 0, jumlah, harga });
+      items.push({ mode, barangId, nama: "", merk: null, kategori: "", satuan: "", lokasiId: 0, jumlah, harga });
     } else {
       const nama = s(o.nama);
+      const kategori = s(o.kategori);
       const satuan = s(o.satuan);
       const lokasiId = n(o.lokasiId);
       if (!nama) return { error: `Barang #${no}: nama barang baru wajib diisi` };
+      if (!kategori) return { error: `Barang #${no}: kategori wajib diisi (dipakai untuk kode barang)` };
       if (!satuan) return { error: `Barang #${no}: satuan wajib diisi` };
       if (!Number.isInteger(lokasiId) || lokasiId <= 0) return { error: `Barang #${no}: pilih lokasi` };
 
       const merk = s(o.merk) || null;
-      const kategori = s(o.kategori) || null;
       if ([nama, merk, kategori, satuan].some((v) => (v?.length ?? 0) > MAKS)) {
         return { error: `Barang #${no}: isian terlalu panjang (maks. ${MAKS} karakter)` };
       }
@@ -108,16 +110,27 @@ function bacaBiaya(json: string): { biaya?: BiayaLain[]; error?: string } {
   return { biaya };
 }
 
+function segarkan() {
+  revalidatePath("/admin/barang-masuk");
+  revalidatePath("/admin/barang");
+  revalidatePath("/admin/kategori");
+  revalidatePath("/admin/lokasi");
+  revalidatePath("/admin");
+}
+
 export async function tambahBarangMasuk(_prev: FormState, formData: FormData): Promise<HasilSimpanNota> {
   await requireUser();
 
   const tanggal = parseTanggal(teks(formData.get("tanggal")));
   const sumber = teks(formData.get("sumber"));
-  const noNota = teks(formData.get("noNota")) || null;
   const keterangan = teks(formData.get("keterangan")) || null;
 
   if (!tanggal) return { error: "Tanggal tidak valid" };
   if (!isSumber(sumber)) return { error: "Pilih sumber barang" };
+
+  // Barang Lama tidak punya dokumen penerimaan → No. Nota selalu kosong
+  const noNota = sumber === "LAMA" ? null : teks(formData.get("noNota")) || null;
+
   if ((noNota?.length ?? 0) > MAKS || (keterangan?.length ?? 0) > MAKS) {
     return { error: `Isian terlalu panjang (maks. ${MAKS} karakter)` };
   }
@@ -133,6 +146,7 @@ export async function tambahBarangMasuk(_prev: FormState, formData: FormData): P
   const { items, error } = bacaItems(teks(formData.get("items")), pembelian);
   if (!items) return { error };
 
+  // Biaya lain-lain hanya untuk Pembelian
   let biaya: BiayaLain[] = [];
   if (pembelian) {
     const hasil = bacaBiaya(teks(formData.get("biayaLain")));
@@ -144,6 +158,7 @@ export async function tambahBarangMasuk(_prev: FormState, formData: FormData): P
     if (subtotal + totalBiaya < 0) return { error: "Total pembayaran tidak boleh minus, periksa potongan" };
   }
 
+  // Pastikan barang, lokasi, dan mitra yang dipilih benar-benar ada
   const idBarang = [...new Set(items.filter((i) => i.mode === "ada").map((i) => i.barangId))];
   const idLokasi = [...new Set(items.filter((i) => i.mode === "baru").map((i) => i.lokasiId))];
   const [jmlBarang, jmlLokasi, jmlMitra] = await Promise.all([
@@ -155,6 +170,7 @@ export async function tambahBarangMasuk(_prev: FormState, formData: FormData): P
   if (jmlLokasi !== idLokasi.length) return { error: "Ada lokasi yang tidak ditemukan, muat ulang halaman" };
   if (!jmlMitra) return { error: "Mitra tidak ditemukan" };
 
+  // Foto nota hanya untuk Pembelian
   let foto: string | null = null;
   const file = formData.get("foto");
   if (pembelian && file instanceof File && file.size > 0) {
@@ -163,18 +179,41 @@ export async function tambahBarangMasuk(_prev: FormState, formData: FormData): P
     foto = hasil.nama;
   }
 
+  // Tahun perolehan barang baru = tahun tanggal nota
+  const tahunPerolehan = bagianWIB(tanggal).y;
+
   try {
     const nota = await prisma.$transaction(async (tx) => {
-      // Barang baru dibuat otomatis. Kalau nama + merk + lokasi yang sama sudah ada, pakai yang lama.
-      const cache = new Map<string, number>();
+      const cacheBarang = new Map<string, number>(); // lokasi|nama|merk → barangId
+      const cacheKategori = new Map<string, number>(); // nama kategori (huruf kecil) → kategoriId
+      let kodeTerpakai: Set<string> | null = null; // dimuat sekali saat butuh kategori baru
+
+      // Cari kategori berdasarkan nama, atau buat baru dengan kode usulan otomatis
+      async function idKategori(nama: string) {
+        const kunci = nama.toLowerCase();
+        const ada = cacheKategori.get(kunci);
+        if (ada) return ada;
+
+        let kategori = await tx.kategori.findUnique({ where: { nama }, select: { id: true } });
+        if (!kategori) {
+          kodeTerpakai ??= new Set((await tx.kategori.findMany({ select: { kode: true } })).map((k) => k.kode));
+          const kode = usulKodeKategori(nama, kodeTerpakai);
+          kategori = await tx.kategori.create({ data: { nama, kode }, select: { id: true } });
+          kodeTerpakai.add(kode);
+        }
+        cacheKategori.set(kunci, kategori.id);
+        return kategori.id;
+      }
+
       const dataItems: { barangId: number; jumlah: number; harga: number | null }[] = [];
 
       for (const it of items) {
         let barangId = it.barangId;
 
         if (it.mode === "baru") {
+          // Kalau nama + merk + lokasi yang sama sudah ada, pakai yang lama
           const kunci = `${it.lokasiId}|${it.nama.toLowerCase()}|${(it.merk ?? "").toLowerCase()}`;
-          const tersimpan = cache.get(kunci);
+          const tersimpan = cacheBarang.get(kunci);
           if (tersimpan) {
             barangId = tersimpan;
           } else {
@@ -182,15 +221,26 @@ export async function tambahBarangMasuk(_prev: FormState, formData: FormData): P
               where: { nama: it.nama, merk: it.merk, lokasiId: it.lokasiId },
               select: { id: true },
             });
-            barangId =
-              lama?.id ??
-              (
-                await tx.barang.create({
-                  data: { nama: it.nama, merk: it.merk, kategori: it.kategori, satuan: it.satuan, lokasiId: it.lokasiId },
-                  select: { id: true },
-                })
-              ).id;
-            cache.set(kunci, barangId);
+            if (lama) {
+              barangId = lama.id;
+            } else {
+              const kategoriId = await idKategori(it.kategori);
+              const kode = await buatKodeBarang(tx, kategoriId, tahunPerolehan);
+              const baru = await tx.barang.create({
+                data: {
+                  kode,
+                  nama: it.nama,
+                  merk: it.merk,
+                  kategoriId,
+                  tahunPerolehan,
+                  satuan: it.satuan,
+                  lokasiId: it.lokasiId,
+                },
+                select: { id: true },
+              });
+              barangId = baru.id;
+            }
+            cacheBarang.set(kunci, barangId);
           }
         }
 
@@ -205,20 +255,17 @@ export async function tambahBarangMasuk(_prev: FormState, formData: FormData): P
           mitraId,
           foto,
           keterangan,
-          biayaLain: biaya.length ? biaya : undefined,
+          biayaLain: biaya.length ? biaya : undefined, // kosong → kolom dibiarkan NULL
           items: { create: dataItems },
         },
         select: { id: true },
       });
     });
 
-    revalidatePath("/admin/barang-masuk");
-    revalidatePath("/admin/barang");
-    revalidatePath("/admin/lokasi");
-    revalidatePath("/admin");
+    segarkan();
     return { ok: true, id: nota.id, pesan: `Barang masuk berhasil dicatat (${items.length} barang)` };
   } catch (e) {
-    if (foto) await hapusFotoNota(foto);
+    if (foto) await hapusFotoNota(foto); // batal simpan → foto ikut dihapus
     throw e;
   }
 }
@@ -247,16 +294,15 @@ async function hapusNota(id: number): Promise<FormState> {
     });
     if (tanpaRiwayat.length) {
       await tx.barang.deleteMany({ where: { id: { in: tanpaRiwayat.map((b) => b.id) } } });
+      // Kategori yang sudah tidak punya barang ikut dihapus
+      await bersihkanKategoriKosong(tx);
     }
     return tanpaRiwayat.length;
   });
 
   if (nota.foto) await hapusFotoNota(nota.foto);
 
-  revalidatePath("/admin/barang-masuk");
-  revalidatePath("/admin/barang");
-  revalidatePath("/admin/lokasi");
-  revalidatePath("/admin");
+  segarkan();
   return {
     ok: true,
     pesan: jumlahBarangTerhapus
@@ -265,6 +311,7 @@ async function hapusNota(id: number): Promise<FormState> {
   };
 }
 
+// Dipakai di tabel daftar barang masuk
 export async function hapusBarangMasuk(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireUser();
   const id = Number(formData.get("id"));
@@ -272,6 +319,7 @@ export async function hapusBarangMasuk(_prev: FormState, formData: FormData): Pr
   return hapusNota(id);
 }
 
+// Dipakai di halaman detail: setelah dihapus kembali ke daftar
 export async function hapusBarangMasukDariDetail(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireUser();
   const id = Number(formData.get("id"));

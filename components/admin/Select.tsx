@@ -1,14 +1,18 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { inputClass } from "@/components/admin/ui";
 
 // keterangan: teks kecil di bawah label (misal nama lokasi), ikut bisa dicari
 export type OpsiSelect = { value: string; label: string; keterangan?: string };
 
+const TINGGI_IDEAL = 256; // px, tinggi maksimal daftar
+const JARAK_TEPI = 12; // px, jarak aman dari tepi layar
+
 // Dropdown pilihan (tidak bisa isi nilai baru), tampilannya sama dengan Combobox.
 // bisaCari = true  → bisa mengetik untuk mencari (cocok untuk daftar panjang)
 // bisaCari = false → hanya klik/pilih (cocok untuk daftar pendek)
+// Daftar otomatis terbuka ke atas kalau ruang di bawah tidak cukup.
 export default function Select({
   id,
   name,
@@ -33,12 +37,14 @@ export default function Select({
   ariaLabel?: string;
 }) {
   const listId = useId();
+  const wadahRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
   const [buka, setBuka] = useState(false);
   const [ketik, setKetik] = useState(false);
   const [query, setQuery] = useState("");
   const [aktif, setAktif] = useState(-1);
+  const [posisi, setPosisi] = useState({ keAtas: false, tinggi: TINGGI_IDEAL });
 
   const terpilih = opsi.find((o) => o.value === value);
   const tampil = terpilih ? (terpilih.keterangan ? `${terpilih.label} — ${terpilih.keterangan}` : terpilih.label) : "";
@@ -48,7 +54,30 @@ export default function Select({
     ? opsi.filter((o) => `${o.label} ${o.keterangan ?? ""}`.toLowerCase().includes(kata))
     : opsi;
 
+  // Ukur ruang di atas & bawah, pilih arah yang lebih lega
+  function hitungPosisi() {
+    const r = wadahRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const ruangBawah = window.innerHeight - r.bottom - JARAK_TEPI;
+    const ruangAtas = r.top - JARAK_TEPI;
+    const keAtas = ruangBawah < Math.min(TINGGI_IDEAL, 200) && ruangAtas > ruangBawah;
+    const tinggi = Math.max(120, Math.min(TINGGI_IDEAL, keAtas ? ruangAtas : ruangBawah));
+    setPosisi({ keAtas, tinggi });
+  }
+
+  // Hitung ulang saat layar di-scroll atau diubah ukurannya selama dropdown terbuka
+  useEffect(() => {
+    if (!buka) return;
+    window.addEventListener("resize", hitungPosisi);
+    window.addEventListener("scroll", hitungPosisi, true);
+    return () => {
+      window.removeEventListener("resize", hitungPosisi);
+      window.removeEventListener("scroll", hitungPosisi, true);
+    };
+  }, [buka]);
+
   function bukaDaftar() {
+    hitungPosisi();
     setBuka(true);
     setKetik(false);
     setQuery("");
@@ -73,7 +102,7 @@ export default function Select({
   }
 
   return (
-    <div className={`relative ${className}`}>
+    <div ref={wadahRef} className={`relative ${className}`}>
       <input
         id={id}
         aria-label={ariaLabel}
@@ -90,6 +119,7 @@ export default function Select({
           if (!bisaCari) return;
           setQuery(e.target.value);
           setKetik(true);
+          if (!buka) hitungPosisi();
           setBuka(true);
           setAktif(0);
         }}
@@ -138,7 +168,10 @@ export default function Select({
           ref={listRef}
           id={listId}
           role="listbox"
-          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-green-100 bg-white shadow-lg [scrollbar-width:thin]"
+          style={{ maxHeight: posisi.tinggi }}
+          className={`absolute z-30 w-full overflow-auto rounded-xl border border-green-100 bg-white shadow-lg [scrollbar-width:thin] ${
+            posisi.keAtas ? "bottom-full mb-1" : "top-full mt-1"
+          }`}
         >
           {hasil.length === 0 ? (
             <li className="px-4 py-2.5 text-sm text-gray-400">Tidak ditemukan</li>

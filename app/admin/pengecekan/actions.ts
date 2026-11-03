@@ -22,13 +22,17 @@ function angka(v: unknown) {
 export async function tambahPeriode(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireUser();
 
-  const tahun = Number(formData.get("tahun"));
-  const bulan = Number(formData.get("bulan"));
-  if (!Number.isInteger(tahun) || tahun < 2000 || tahun > 2100) return { error: "Tahun tidak valid" };
-  if (!Number.isInteger(bulan) || bulan < 1 || bulan > 12) return { error: "Bulan tidak valid" };
-
-  const awal = parseBulan(`${tahun}-${String(bulan).padStart(2, "0")}`);
+  // Kode bulan dari pilihan, misal "2026-10"
+  const awal = parseBulan(teks(formData.get("bulan")));
   if (!awal) return { error: "Bulan tidak valid" };
+  const rentang = rentangBulan(awal);
+
+  // Bulan harus berada di dalam salah satu tahun ajaran
+  const ta = await prisma.tahunAjaran.findFirst({
+    where: { mulai: { lt: rentang.lt }, selesai: { gte: rentang.gte } },
+    select: { id: true },
+  });
+  if (!ta) return { error: `${fmtBulan(awal)} di luar tahun ajaran mana pun. Tambahkan tahun ajarannya dulu.` };
 
   const sudah = await prisma.periodePengecekan.findUnique({ where: { bulan: awal }, select: { id: true } });
   if (sudah) return { error: `Pengecekan ${fmtBulan(awal)} sudah ada di daftar` };
