@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/auth";
+import { requireAdmin  } from "@/lib/auth";
 import { isUniqueError } from "@/lib/prismaError";
 import { bagianWIB } from "@/lib/format";
 import { bersihkanKategoriKosong, buatKodeBarang, usulKodeKategori } from "@/lib/kodeBarang";
@@ -21,7 +21,7 @@ function segarkan() {
 }
 
 export async function simpanBarang(_prev: FormState, formData: FormData): Promise<FormState> {
-  await requireUser();
+  await requireAdmin();
 
   const id = Number(formData.get("id")) || 0;
   const nama = teks(formData.get("nama"));
@@ -118,7 +118,7 @@ export async function simpanBarang(_prev: FormState, formData: FormData): Promis
 }
 
 export async function hapusBarang(_prev: FormState, formData: FormData): Promise<FormState> {
-  await requireUser();
+  await requireAdmin();
 
   const id = Number(formData.get("id"));
   if (!id) return { error: "Data tidak valid" };
