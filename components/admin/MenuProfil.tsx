@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { logout } from "@/app/admin/actions";
 
-const MENU = [
+// Menu tambahan khusus ADMIN
+const MENU_ADMIN = [
   {
     href: "/admin/user",
     label: "Kelola User",
@@ -27,9 +28,10 @@ function Ikon({ d }: { d: string[] }) {
   );
 }
 
+// Kotak huruf depan nama. Ukuran diatur lewat className
 function Inisial({ nama, className }: { nama: string; className: string }) {
   return (
-    <span className={`grid size-10 shrink-0 place-items-center rounded-xl text-base font-semibold ${className}`}>
+    <span className={`grid shrink-0 place-items-center rounded-xl font-semibold ${className}`}>
       {nama.trim().charAt(0).toUpperCase() || "?"}
     </span>
   );
@@ -42,10 +44,12 @@ export default function MenuProfil({
   nama,
   email,
   onNavigate,
+  admin = true,
 }: {
   nama: string;
   email: string;
   onNavigate?: () => void; // menutup sidebar di HP setelah pindah halaman
+  admin?: boolean; // false = USER: hanya tombol Keluar
 }) {
   const [buka, setBuka] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -78,23 +82,25 @@ export default function MenuProfil({
       {buka && (
         <div role="menu" className="absolute bottom-full left-0 right-4 z-10 mb-2 overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-black/5">
           <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-3">
-            <Inisial nama={nama} className="bg-gray-100 text-gray-900" />
+            <Inisial nama={nama} className="size-10 bg-gray-100 text-base text-gray-900" />
             <div className="min-w-0">
               <p className="truncate font-semibold text-gray-900">{nama}</p>
               <p className="truncate text-xs text-gray-500">{email}</p>
             </div>
           </div>
 
-          <div className="p-1.5">
-            {MENU.map((m) => (
-              <Link key={m.href} href={m.href} role="menuitem" onClick={pilih} className={itemClass}>
-                <Ikon d={m.ikon} />
-                {m.label}
-              </Link>
-            ))}
-          </div>
+          {admin && (
+            <div className="p-1.5">
+              {MENU_ADMIN.map((m) => (
+                <Link key={m.href} href={m.href} role="menuitem" onClick={pilih} className={itemClass}>
+                  <Ikon d={m.ikon} />
+                  {m.label}
+                </Link>
+              ))}
+            </div>
+          )}
 
-          <form action={logout} className="border-t border-gray-100 p-1.5">
+          <form action={logout} className={`p-1.5 ${admin ? "border-t border-gray-100" : ""}`}>
             <button type="submit" role="menuitem" className={itemClass}>
               <Ikon d={["M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3", "M10 16l-4-4 4-4", "M6 12h10"]} />
               Keluar
@@ -103,19 +109,19 @@ export default function MenuProfil({
         </div>
       )}
 
-      {/* Tombol profil di bawah sidebar.
-          Normal: menyatu dengan warna sidebar. Disorot mouse / menu terbuka: putih transparan */}
+      {/* Tombol profil di bawah sidebar (ukuran ringkas, sejajar judul grup menu).
+          Normal: menyatu dengan warna sidebar. Disorot / menu terbuka: putih transparan */}
       <button
         type="button"
         onClick={() => setBuka((b) => !b)}
         aria-haspopup="menu"
         aria-expanded={buka}
-        className={`flex w-full items-center gap-3 rounded-2xl p-2 text-left text-white transition ${
-          buka ? "bg-white/10" : "hover:bg-white/10"
+        className={`flex w-full items-center gap-3 rounded-2xl px-4 py-2 text-left text-white transition ${
+          buka ? "bg-white/10" : "hover:bg-white/10 active:bg-white/10"
         }`}
       >
-        <Inisial nama={nama} className="bg-white/15" />
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{nama}</span>
+        <Inisial nama={nama} className="size-9 bg-white/15 text-sm" />
+        <span className="min-w-0 flex-1 truncate text-sm font-medium">{nama}</span>
         <svg viewBox="0 0 24 24" className="mr-1 size-4 shrink-0 text-white/70" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M8 9l4-4 4 4M8 15l4 4 4-4" />
         </svg>

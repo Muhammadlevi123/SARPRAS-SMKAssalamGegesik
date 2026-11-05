@@ -14,24 +14,28 @@ export default function LoginForm() {
   return (
     <form action={formAction} className="flex flex-col gap-6">
       {state.error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {state.error}
         </div>
       )}
 
       <div className="flex flex-col gap-2">
         <label htmlFor="email" className="text-sm font-semibold text-gray-700">
-          Username
+          Email
         </label>
         <input
           id="email"
           name="email"
-          type="text"
+          type="email"
+          inputMode="email"
           required
           autoFocus
-          autoComplete="username"
+          maxLength={254}
+          autoComplete="email"
+          autoCapitalize="none"
+          spellCheck={false}
           defaultValue={state.email}
-          placeholder="Masukkan username"
+          placeholder="nama@email.com"
           suppressHydrationWarning
           className={inputClass}
         />
@@ -46,6 +50,7 @@ export default function LoginForm() {
           name="password"
           type="password"
           required
+          maxLength={72}
           autoComplete="current-password"
           placeholder="Masukkan password"
           suppressHydrationWarning

@@ -28,7 +28,7 @@ export default function TambahBulanPengecekan({
         onClick={() => setBuka(true)}
         disabled={habis}
         title={habis ? `Semua bulan di tahun ajaran ${namaTA} sudah ditambahkan` : undefined}
-        className={`${btnPrimary} disabled:cursor-not-allowed disabled:opacity-50`}
+        className={`${btnPrimary} justify-center disabled:cursor-not-allowed disabled:opacity-50`}
       >
         + Tambah Pengecekan
       </button>
@@ -69,8 +69,7 @@ function IsiForm({
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <p className="text-sm text-gray-500">
-        Pilih bulan di <b>Tahun Ajaran {namaTA}</b>. Setelah ditambahkan, klik <b>Detail</b> untuk mulai mengecek per
-        lokasi.
+        Pilih bulan di <b>Tahun Ajaran {namaTA}</b>. Setelah ditambahkan, buka bulannya untuk mulai mengecek per lokasi.
       </p>
 
       <div className="flex flex-col gap-2">
@@ -78,9 +77,12 @@ function IsiForm({
         <Select id="pilih-bulan" name="bulan" value={bulan} onChange={setBulan} opsi={opsi} bisaCari={false} />
       </div>
 
-      <div className="mt-2 flex justify-end gap-3">
-        <button type="button" onClick={onSelesai} className={btnSecondary}>Batal</button>
-        <button type="submit" disabled={pending || !bulan} className={btnPrimary}>
+      {/* HP: 2 tombol lebar sama besar. Desktop: di kanan */}
+      <div className="mt-2 grid grid-cols-2 gap-3 sm:flex sm:justify-end">
+        <button type="button" onClick={onSelesai} className={`${btnSecondary} justify-center`}>
+          Batal
+        </button>
+        <button type="submit" disabled={pending || !bulan} className={`${btnPrimary} justify-center`}>
           {pending ? "Menyimpan..." : "Tambah"}
         </button>
       </div>

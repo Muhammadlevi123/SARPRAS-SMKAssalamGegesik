@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useId, useState } from "react";
 import Modal from "@/components/admin/Modal";
 import { toast } from "@/components/admin/Toaster";
 import { ubahKategori } from "@/app/admin/kategori/actions";
@@ -9,24 +9,45 @@ import { btnPrimary, btnSecondary, inputClass, labelClass } from "@/components/a
 
 type Data = { id: number; nama: string; kode: string; jumlahBarang: number };
 
-// Ikon pensil untuk mengubah nama & kode kategori
-export default function KategoriForm({ data }: { data: Data }) {
+const IkonPensil = ({ className }: { className: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+  </svg>
+);
+
+// Tombol untuk mengubah nama & kode kategori
+export default function KategoriForm({
+  data,
+  tampilan = "ikon",
+}: {
+  data: Data;
+  tampilan?: "ikon" | "kartu"; // "kartu" = tombol lebar (untuk HP)
+}) {
   const [buka, setBuka] = useState(false);
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setBuka(true)}
-        title="Ubah kategori"
-        aria-label="Ubah kategori"
-        className="rounded-lg p-2 text-gray-500 hover:bg-green-50 hover:text-green-700"
-      >
-        <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M12 20h9" />
-          <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
-        </svg>
-      </button>
+      {tampilan === "kartu" ? (
+        <button
+          type="button"
+          onClick={() => setBuka(true)}
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 text-sm font-semibold text-green-700 active:bg-green-100"
+        >
+          <IkonPensil className="size-5" />
+          Ubah Kategori
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setBuka(true)}
+          title="Ubah kategori"
+          aria-label="Ubah kategori"
+          className="rounded-lg p-2 text-gray-500 hover:bg-green-50 hover:text-green-700"
+        >
+          <IkonPensil className="size-5" />
+        </button>
+      )}
 
       {buka && (
         <Modal judul="Ubah Kategori" onClose={() => setBuka(false)}>
@@ -38,6 +59,8 @@ export default function KategoriForm({ data }: { data: Data }) {
 }
 
 function IsiForm({ data, onSelesai }: { data: Data; onSelesai: () => void }) {
+  // useId: id unik, karena tombol ubah ada di kartu HP & tabel desktop
+  const uid = useId();
   const [nama, setNama] = useState(data.nama);
   const [kode, setKode] = useState(data.kode);
   const kodeBerubah = kode !== data.kode;
@@ -60,12 +83,11 @@ function IsiForm({ data, onSelesai }: { data: Data; onSelesai: () => void }) {
       )}
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="nama" className={labelClass}>Nama Kategori</label>
+        <label htmlFor={`${uid}-nama`} className={labelClass}>Nama Kategori</label>
         <input
-          id="nama"
+          id={`${uid}-nama`}
           name="nama"
           required
-          autoFocus
           value={nama}
           onChange={(e) => setNama(e.target.value)}
           className={inputClass}
@@ -73,13 +95,14 @@ function IsiForm({ data, onSelesai }: { data: Data; onSelesai: () => void }) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="kode" className={labelClass}>Kode (3 huruf)</label>
+        <label htmlFor={`${uid}-kode`} className={labelClass}>Kode (3 huruf)</label>
         <input
-          id="kode"
+          id={`${uid}-kode`}
           name="kode"
           required
           minLength={3}
           maxLength={3}
+          autoCapitalize="characters"
           value={kode}
           onChange={(e) => setKode(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))}
           className={`${inputClass} font-mono uppercase tracking-widest`}
@@ -95,9 +118,12 @@ function IsiForm({ data, onSelesai }: { data: Data; onSelesai: () => void }) {
         </p>
       )}
 
-      <div className="mt-2 flex justify-end gap-3">
-        <button type="button" onClick={onSelesai} className={btnSecondary}>Batal</button>
-        <button type="submit" disabled={pending} className={btnPrimary}>
+      {/* HP: 2 tombol lebar sama besar. Desktop: di kanan seperti semula */}
+      <div className="mt-2 grid grid-cols-2 gap-3 sm:flex sm:justify-end">
+        <button type="button" onClick={onSelesai} className={`${btnSecondary} justify-center`}>
+          Batal
+        </button>
+        <button type="submit" disabled={pending} className={`${btnPrimary} justify-center`}>
           {pending ? "Menyimpan..." : "Simpan"}
         </button>
       </div>

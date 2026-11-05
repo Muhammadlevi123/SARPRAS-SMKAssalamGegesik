@@ -14,9 +14,15 @@ export async function simpanFotoNota(file: File): Promise<{ nama: string } | { e
   if (file.type !== "image/jpeg") return { error: "Format foto tidak didukung" };
   if (file.size > MAKS_BYTE) return { error: "Ukuran foto terlalu besar (maks. 1 MB setelah dikecilkan)" };
 
+  const isi = Buffer.from(await file.arrayBuffer());
+  // file.type bisa dipalsukan → cek isi aslinya: file JPEG selalu diawali byte FF D8 FF
+  if (isi.length < 3 || isi[0] !== 0xff || isi[1] !== 0xd8 || isi[2] !== 0xff) {
+    return { error: "File bukan foto JPEG" };
+  }
+
   await mkdir(FOLDER, { recursive: true });
   const nama = `${randomUUID()}.jpg`;
-  await writeFile(pathFoto(nama), Buffer.from(await file.arrayBuffer()));
+  await writeFile(pathFoto(nama), isi);
   return { nama };
 }
 

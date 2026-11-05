@@ -42,13 +42,13 @@ export default function TombolHapus({
 
   return (
     <>
-      {/* Tombol ikon tempat sampah di tabel */}
+      {/* Tombol ikon tempat sampah */}
       <button
         type="button"
         onClick={() => setBuka(true)}
         aria-label={`Hapus ${nama}`}
         title="Hapus"
-        className="grid size-9 place-items-center rounded-lg text-gray-500 transition hover:bg-red-50 hover:text-red-600"
+        className="grid size-9 place-items-center rounded-lg text-gray-500 transition hover:bg-red-50 hover:text-red-600 active:bg-red-100 active:text-red-600"
       >
         <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
@@ -57,17 +57,14 @@ export default function TombolHapus({
 
       {/* Pop-up konfirmasi (kecil & rata tengah) */}
       {buka && (
-        <div
-          className="fixed inset-0 z-[60] grid place-items-center bg-black/40 p-4"
-          onClick={tutup}
-        >
+        <div className="fixed inset-0 z-60 grid place-items-center bg-black/40 p-4" onClick={tutup}>
           <form
             action={formAction}
             role="alertdialog"
             aria-modal="true"
             aria-labelledby={`hapus-judul-${id}`}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl"
+            className="w-full max-w-sm rounded-2xl bg-white p-5 text-center shadow-xl sm:p-6"
           >
             <input type="hidden" name="id" value={id} />
 
@@ -80,16 +77,17 @@ export default function TombolHapus({
             <h3 id={`hapus-judul-${id}`} className="mt-4 text-base font-bold text-gray-900">
               Hapus data?
             </h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 break-words text-sm text-gray-500">
               <b className="font-semibold text-gray-800">{nama}</b> akan dihapus permanen.
             </p>
 
+            {/* HP: tombol lebih tinggi supaya mudah ditekan */}
             <div className="mt-6 grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={tutup}
                 disabled={pending}
-                className="h-10 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-60"
+                className="h-11 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 active:bg-gray-100 disabled:opacity-60 sm:h-10"
               >
                 Batal
               </button>
@@ -97,7 +95,7 @@ export default function TombolHapus({
                 type="submit"
                 disabled={pending}
                 autoFocus
-                className="h-10 rounded-xl bg-red-600 text-sm font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="h-11 rounded-xl bg-red-600 text-sm font-bold text-white transition hover:bg-red-700 active:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60 sm:h-10"
               >
                 {pending ? "Menghapus..." : "Hapus"}
               </button>

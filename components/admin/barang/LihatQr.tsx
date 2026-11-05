@@ -44,34 +44,38 @@ export default function LihatQr({
 
       {buka && (
         <Modal judul="Label QR" onClose={() => setBuka(false)}>
-          <div className="flex flex-col gap-5">
-            {/* Pratinjau label (diperbesar 1,5x supaya jelas di layar) */}
-            <div className="grid place-items-center rounded-2xl bg-gray-50 p-4">
-              <div style={{ zoom: 1.5 }}>
+          <div className="flex min-w-0 flex-col gap-5">
+            {/* Pratinjau label.
+                HP: ukuran asli (64 mm ≈ 242px, pas layar). Layar besar: diperbesar 1,5x */}
+            <div className="grid min-w-0 place-items-center overflow-hidden rounded-2xl bg-gray-50 p-4">
+              <div className="sm:[zoom:1.5]">
                 <LabelQr kode={kode} svg={svg} ke={1} dari={banyakLabel} />
               </div>
             </div>
 
-            <dl className="grid grid-cols-[90px_1fr] gap-y-1.5 text-sm">
+            <dl className="grid grid-cols-[72px_1fr] gap-y-1.5 text-sm sm:grid-cols-[90px_1fr]">
               <dt className="text-gray-500">Barang</dt>
-              <dd className="font-semibold text-gray-900">{nama}</dd>
+              <dd className="min-w-0 break-words font-semibold text-gray-900">{nama}</dd>
               <dt className="text-gray-500">Lokasi</dt>
-              <dd className="text-gray-800">{lokasi}</dd>
+              <dd className="min-w-0 break-words text-gray-800">{lokasi}</dd>
               <dt className="text-gray-500">Jumlah</dt>
-              <dd className="text-gray-800">
+              <dd className="min-w-0 text-gray-800">
                 {jumlah.toLocaleString("id-ID")} {satuan} → <b>{banyakLabel} label</b>
               </dd>
             </dl>
 
-            <div className="flex justify-end gap-3 border-t border-gray-100 pt-4">
-              <button type="button" onClick={() => setBuka(false)} className={btnSecondary}>Tutup</button>
+            {/* HP: 2 tombol lebar sama besar. Layar besar: di kanan */}
+            <div className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-4 sm:flex sm:justify-end">
+              <button type="button" onClick={() => setBuka(false)} className={`${btnSecondary} justify-center`}>
+                Tutup
+              </button>
               <button
                 type="button"
                 onClick={() => {
                   setBuka(false);
                   cetak({ id });
                 }}
-                className={btnPrimary}
+                className={`${btnPrimary} justify-center`}
               >
                 Cetak {banyakLabel} label
               </button>

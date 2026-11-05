@@ -8,10 +8,12 @@ export type OpsiSelect = { value: string; label: string; keterangan?: string };
 
 const TINGGI_IDEAL = 256; // px, tinggi maksimal daftar
 const JARAK_TEPI = 12; // px, jarak aman dari tepi layar
+const MIN_UNTUK_CARI = 9; // pencarian aktif kalau pilihan ≥ 9 (daftar pendek tidak perlu keyboard)
 
 // Dropdown pilihan (tidak bisa isi nilai baru), tampilannya sama dengan Combobox.
-// bisaCari = true  → bisa mengetik untuk mencari (cocok untuk daftar panjang)
-// bisaCari = false → hanya klik/pilih (cocok untuk daftar pendek)
+// bisaCari = true  → bisa mengetik untuk mencari, KALAU pilihannya banyak
+// bisaCari = false → hanya klik/pilih
+// Di HP, daftar pendek tidak memunculkan keyboard (cukup ditekan).
 // Daftar otomatis terbuka ke atas kalau ruang di bawah tidak cukup.
 export default function Select({
   id,
@@ -45,6 +47,9 @@ export default function Select({
   const [query, setQuery] = useState("");
   const [aktif, setAktif] = useState(-1);
   const [posisi, setPosisi] = useState({ keAtas: false, tinggi: TINGGI_IDEAL });
+
+  // Pencarian hanya untuk daftar panjang
+  const cari = bisaCari && opsi.length >= MIN_UNTUK_CARI;
 
   const terpilih = opsi.find((o) => o.value === value);
   const tampil = terpilih ? (terpilih.keterangan ? `${terpilih.label} — ${terpilih.keterangan}` : terpilih.label) : "";
@@ -107,16 +112,16 @@ export default function Select({
         id={id}
         aria-label={ariaLabel}
         value={buka && ketik ? query : tampil}
-        placeholder={placeholder}
+        placeholder={buka && cari ? "Ketik untuk mencari..." : placeholder}
         required={required}
-        readOnly={!bisaCari}
+        readOnly={!cari}
         autoComplete="off"
         role="combobox"
         aria-expanded={buka}
         aria-controls={listId}
         aria-autocomplete="list"
         onChange={(e) => {
-          if (!bisaCari) return;
+          if (!cari) return;
           setQuery(e.target.value);
           setKetik(true);
           if (!buka) hitungPosisi();
@@ -164,17 +169,18 @@ export default function Select({
       </span>
 
       {buka && (
+        // z-40: di atas bilah bawah (Simpan) yang menempel di form HP
         <ul
           ref={listRef}
           id={listId}
           role="listbox"
           style={{ maxHeight: posisi.tinggi }}
-          className={`absolute z-30 w-full overflow-auto rounded-xl border border-green-100 bg-white shadow-lg [scrollbar-width:thin] ${
+          className={`absolute z-40 w-full overflow-auto overscroll-contain rounded-xl border border-green-100 bg-white shadow-lg [scrollbar-width:thin] ${
             posisi.keAtas ? "bottom-full mb-1" : "top-full mt-1"
           }`}
         >
           {hasil.length === 0 ? (
-            <li className="px-4 py-2.5 text-sm text-gray-400">Tidak ditemukan</li>
+            <li className="px-4 py-3 text-sm text-gray-400 sm:py-2.5">Tidak ditemukan</li>
           ) : (
             hasil.map((o, i) => (
               <li
@@ -186,7 +192,7 @@ export default function Select({
                   pilih(o);
                 }}
                 onMouseEnter={() => setAktif(i)}
-                className={`flex cursor-pointer items-center justify-between gap-3 px-4 py-2.5 text-sm ${
+                className={`flex cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm sm:py-2.5 ${
                   i === aktif ? "bg-green-50 text-green-800" : "text-gray-700"
                 }`}
               >

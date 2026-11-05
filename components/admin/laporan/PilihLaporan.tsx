@@ -43,14 +43,15 @@ export default function PilihLaporan({ tahunAjaran, taAwal, lokasi }: { tahunAja
 
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-3">
+      {/* HP: kartu bertumpuk. Desktop: 3 kolom */}
+      <div className="grid min-w-0 gap-3 sm:gap-4 md:grid-cols-3">
         {KARTU.map((k) => (
-          <div key={k.jenis} className="flex flex-col gap-3 rounded-3xl border border-green-100 bg-white p-5 shadow-sm">
-            <div>
+          <div key={k.jenis} className="flex min-w-0 flex-col gap-3 rounded-3xl border border-green-100 bg-white p-4 shadow-sm sm:p-5">
+            <div className="min-w-0">
               <h3 className="font-semibold text-gray-900">{k.judul}</h3>
               <p className="mt-1 text-sm text-gray-500">{k.ket}</p>
             </div>
-            <button type="button" onClick={() => setJenis(k.jenis)} className={`${btnPrimary} mt-auto`}>
+            <button type="button" onClick={() => setJenis(k.jenis)} className={`${btnPrimary} mt-auto justify-center`}>
               Export
             </button>
           </div>
@@ -69,7 +70,9 @@ export default function PilihLaporan({ tahunAjaran, taAwal, lokasi }: { tahunAja
 // ======================= Isi modal =======================
 
 const centang = "size-4 shrink-0 accent-green-700";
-const kotakPilihan = "flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 hover:bg-green-50";
+// HP: baris lebih tinggi (py-2.5) supaya mudah ditekan jari
+const kotakPilihan =
+  "flex min-w-0 cursor-pointer items-center gap-2 rounded-lg px-2 py-2.5 text-sm text-gray-700 hover:bg-green-50 active:bg-green-50 sm:py-1.5";
 
 function FormExport({
   jenis,
@@ -189,7 +192,7 @@ function FormExport({
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex min-w-0 flex-col gap-5">
       {/* Tahun ajaran */}
       <div className="flex flex-col gap-2">
         <label htmlFor="pilih-ta" className={labelClass}>Tahun Ajaran</label>
@@ -204,7 +207,7 @@ function FormExport({
       </div>
 
       {/* Bulan */}
-      <fieldset className="flex flex-col gap-2">
+      <fieldset className="flex min-w-0 flex-col gap-2">
         <legend className={`${labelClass} mb-2`}>
           Bulan{" "}
           <span className="font-normal text-gray-400">
@@ -222,7 +225,7 @@ function FormExport({
             {ta.bulan.map((b) => (
               <label key={b.kode} className={kotakPilihan}>
                 <input type={satuBulan ? "radio" : "checkbox"} className={centang} checked={bulan.has(b.kode)} onChange={() => toggleBulan(b.kode)} />
-                {b.label}
+                <span className="truncate">{b.label}</span>
               </label>
             ))}
           </div>
@@ -230,21 +233,31 @@ function FormExport({
       </fieldset>
 
       {/* Lokasi */}
-      <fieldset className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
+      <fieldset className="flex min-w-0 flex-col gap-2">
+        {/* Judul + tombol: turun ke baris berikutnya kalau layar sempit */}
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
           <legend className={labelClass}>
             Lokasi <span className="font-normal text-gray-400">({lokasiDipilih.size} dari {lokasi.length})</span>
           </legend>
           <div className="flex gap-1 text-xs font-semibold">
-            <button type="button" onClick={() => setLokasiDipilih(new Set(lokasi.map((l) => l.id)))} className="rounded-md px-2 py-1 text-green-700 hover:bg-green-50">
+            <button
+              type="button"
+              onClick={() => setLokasiDipilih(new Set(lokasi.map((l) => l.id)))}
+              className="rounded-md px-2.5 py-1.5 text-green-700 hover:bg-green-50 active:bg-green-50"
+            >
               Pilih semua
             </button>
-            <button type="button" onClick={() => setLokasiDipilih(new Set())} className="rounded-md px-2 py-1 text-gray-500 hover:bg-gray-100">
+            <button
+              type="button"
+              onClick={() => setLokasiDipilih(new Set())}
+              className="rounded-md px-2.5 py-1.5 text-gray-500 hover:bg-gray-100 active:bg-gray-100"
+            >
               Kosongkan
             </button>
           </div>
         </div>
-        <div className="grid max-h-48 grid-cols-2 gap-x-2 overflow-y-auto rounded-xl border border-gray-100 p-1">
+        {/* HP: 1 kolom (nama lokasi panjang tidak terpotong). Layar lebar: 2 kolom */}
+        <div className="grid max-h-56 grid-cols-1 gap-x-2 overflow-y-auto overscroll-contain rounded-xl border border-gray-100 p-1 sm:max-h-48 sm:grid-cols-2">
           {lokasi.map((l) => (
             <label key={l.id} className={kotakPilihan}>
               <input type="checkbox" className={centang} checked={lokasiDipilih.has(l.id)} onChange={() => toggleLokasi(l.id)} />
@@ -255,13 +268,13 @@ function FormExport({
       </fieldset>
 
       {/* Hasil: Excel → Cetak / PDF */}
-      <fieldset className="flex flex-col gap-2">
+      <fieldset className="flex min-w-0 flex-col gap-2">
         <legend className={`${labelClass} mb-2`}>Hasil</legend>
         <div className="grid grid-cols-2 gap-2">
           {PILIHAN_HASIL.map((h) => (
             <label
               key={h.nilai}
-              className={`flex cursor-pointer flex-col gap-0.5 rounded-xl border p-3 ${
+              className={`flex min-w-0 cursor-pointer flex-col gap-0.5 rounded-xl border p-3 ${
                 hasil === h.nilai ? "border-green-600 bg-green-50" : "border-gray-200 hover:bg-gray-50"
               }`}
             >
@@ -278,7 +291,7 @@ function FormExport({
         {ta.bulan.length > 0 && (
           <label className={`${kotakPilihan} mt-1 items-start rounded-xl border border-gray-200 p-3`}>
             <input type="checkbox" className={`${centang} mt-0.5`} checked={perBulan} onChange={(e) => setPerBulan(e.target.checked)} />
-            <span>
+            <span className="min-w-0">
               <b>Pisah per bulan</b>
               <span className="block text-[11px] text-gray-500">
                 {hasil === "excel"
@@ -290,9 +303,12 @@ function FormExport({
         )}
       </fieldset>
 
-      <div className="flex justify-end gap-3 border-t border-gray-100 pt-4">
-        <button type="button" onClick={onSelesai} className={btnSecondary}>Batal</button>
-        <button type="button" onClick={lanjutkan} disabled={!!proses} className={btnPrimary}>
+      {/* HP: 2 tombol lebar sama besar. Desktop: di kanan */}
+      <div className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-4 sm:flex sm:justify-end">
+        <button type="button" onClick={onSelesai} className={`${btnSecondary} justify-center`}>
+          Batal
+        </button>
+        <button type="button" onClick={lanjutkan} disabled={!!proses} className={`${btnPrimary} justify-center`}>
           {proses || (hasil === "cetak" ? "Cetak / PDF" : "Download Excel")}
         </button>
       </div>

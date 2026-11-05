@@ -113,7 +113,7 @@ export default async function LaporanPage({ searchParams }: { searchParams: Prom
   }
 
   return (
-    <div>
+    <div className="min-w-0">
       <div className="print:hidden">
         <PageHeader judul="Laporan" deskripsi="Pilih jenis laporan, centang data yang ingin dimasukkan, lalu export." />
         <PilihLaporan tahunAjaran={opsiTA} taAwal={aktif?.id ?? daftarTA[0].id} lokasi={lokasi} />

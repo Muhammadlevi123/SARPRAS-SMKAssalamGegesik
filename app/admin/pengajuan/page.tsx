@@ -15,7 +15,7 @@ export default async function PengajuanPage() {
   // USER yang belum dipasangkan lokasi oleh admin
   if (!admin && !user.lokasi) {
     return (
-      <div>
+      <div className="min-w-0">
         <PageHeader judul="Pengajuan" deskripsi="Ajukan barang yang dibutuhkan untuk lokasi Anda." />
         <EmptyState
           judul="Akun belum ditetapkan ke lokasi"
@@ -49,7 +49,8 @@ export default async function PengajuanPage() {
   }));
 
   return (
-    <div>
+    // min-w-0: isi halaman selalu pas selebar layar HP
+    <div className="min-w-0">
       <PageHeader
         judul="Pengajuan"
         deskripsi={admin ? "Pengajuan barang dari semua lokasi." : `Pengajuan barang untuk ${user.lokasi!.nama}.`}

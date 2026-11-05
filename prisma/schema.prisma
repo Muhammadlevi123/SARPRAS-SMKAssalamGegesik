@@ -31,6 +31,7 @@ model User {
   password  String   // hash bcrypt, jangan simpan teks asli
   role      Role     @default(USER)
   lokasiId  Int?     // lokasi tanggung jawab; kosong = menunggu ditetapkan admin
+  sesiVersi Int      @default(0) // BARU: naik = semua sesi lama user ini tidak berlaku (misal setelah Keluar)
   createdAt DateTime @default(now())
 
   lokasi    Lokasi?     @relation(fields: [lokasiId], references: [id], onDelete: SetNull)
@@ -214,4 +215,21 @@ model PengajuanItem {
   pengajuan Pengajuan @relation(fields: [pengajuanId], references: [id], onDelete: Cascade)
 
   @@index([pengajuanId])
+}
+
+// BARU: riwayat percobaan login, dipakai untuk:
+// - kunci akun: 5 kali salah dalam 15 menit → dikunci 15 menit (per email), 20 kali per IP
+// - bukti kalau ada serangan (siapa, dari IP mana, kapan)
+// Disimpan 30 hari, lalu dihapus otomatis.
+model PercobaanLogin {
+  id        Int      @id @default(autoincrement())
+  email     String   @db.VarChar(254)
+  ip        String   @db.VarChar(45) // IPv6 terpanjang 45 karakter
+  berhasil  Boolean
+  alasan    String?  @db.VarChar(20) // "password" | "menunggu" | "terkunci" | null (berhasil)
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ip, createdAt])
+  @@index([createdAt])
 }

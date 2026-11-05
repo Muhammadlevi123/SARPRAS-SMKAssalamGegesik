@@ -20,7 +20,7 @@ export default function PengajuanForm({ namaLokasi }: { namaLokasi: string }) {
 
   return (
     <>
-      <button type="button" onClick={() => setBuka(true)} className={btnPrimary}>
+      <button type="button" onClick={() => setBuka(true)} className={`${btnPrimary} justify-center`}>
         + Buat Pengajuan
       </button>
 
@@ -52,17 +52,17 @@ function IsiForm({ namaLokasi, onSelesai }: { namaLokasi: string; onSelesai: () 
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-5">
+    <form action={formAction} className="flex min-w-0 flex-col gap-5">
       {state.error && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{state.error}</div>
       )}
 
-      <p className="rounded-xl bg-green-50 px-4 py-3 text-sm text-gray-700">
+      <p className="break-words rounded-xl bg-green-50 px-4 py-3 text-sm text-gray-700">
         Untuk lokasi <b className="text-gray-900">{namaLokasi}</b>
       </p>
 
       {/* Barang yang diajukan */}
-      <div className="flex flex-col gap-2">
+      <div className="flex min-w-0 flex-col gap-2">
         <span className={labelClass}>Barang yang diajukan</span>
 
         <datalist id="daftar-satuan">
@@ -73,51 +73,55 @@ function IsiForm({ namaLokasi, onSelesai }: { namaLokasi: string; onSelesai: () 
 
         <div className="flex flex-col gap-3">
           {baris.map((b, i) => (
-            <div key={b.kunci} className="rounded-2xl border border-gray-100 p-3">
+            <div key={b.kunci} className="min-w-0 rounded-2xl border border-gray-100 p-3">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-xs font-semibold text-gray-500">Barang {i + 1}</span>
                 {baris.length > 1 && (
                   <button
                     type="button"
                     onClick={() => setBaris((lama) => lama.filter((x) => x.kunci !== b.kunci))}
-                    className="rounded-md px-2 py-0.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+                    className="rounded-md px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 active:bg-red-50"
                   >
                     Hapus
                   </button>
                 )}
               </div>
 
+              {/* HP: Nama & Merk lebar penuh, Jumlah + Satuan berdampingan */}
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-[2fr_1.3fr_80px_100px]">
                 <input
                   name="nama"
                   placeholder="Nama barang"
                   value={b.nama}
                   onChange={(e) => ubah(b.kunci, "nama", e.target.value)}
-                  className={`${inputClass} col-span-2 sm:col-span-1`}
+                  className={`${inputClass} col-span-2 min-w-0 sm:col-span-1`}
                 />
                 <input
                   name="merk"
                   placeholder="Merk (opsional)"
                   value={b.merk}
                   onChange={(e) => ubah(b.kunci, "merk", e.target.value)}
-                  className={`${inputClass} col-span-2 sm:col-span-1`}
+                  className={`${inputClass} col-span-2 min-w-0 sm:col-span-1`}
                 />
                 <input
                   name="jumlah"
                   type="number"
+                  inputMode="numeric"
                   min={1}
                   placeholder="Jumlah"
+                  aria-label={`Jumlah barang ${i + 1}`}
                   value={b.jumlah}
                   onChange={(e) => ubah(b.kunci, "jumlah", e.target.value)}
-                  className={inputClass}
+                  className={`${inputClass} min-w-0`}
                 />
                 <input
                   name="satuan"
                   list="daftar-satuan"
                   placeholder="Satuan"
+                  aria-label={`Satuan barang ${i + 1}`}
                   value={b.satuan}
                   onChange={(e) => ubah(b.kunci, "satuan", e.target.value)}
-                  className={inputClass}
+                  className={`${inputClass} min-w-0`}
                 />
               </div>
             </div>
@@ -127,7 +131,7 @@ function IsiForm({ namaLokasi, onSelesai }: { namaLokasi: string; onSelesai: () 
         <button
           type="button"
           onClick={() => setBaris((lama) => [...lama, barisBaru()])}
-          className="self-start rounded-lg px-3 py-1.5 text-sm font-semibold text-green-700 hover:bg-green-50"
+          className="rounded-xl border-2 border-dashed border-green-200 py-2.5 text-sm font-semibold text-green-700 hover:bg-green-50 active:bg-green-50 sm:self-start sm:border-0 sm:px-3 sm:py-1.5"
         >
           + Tambah barang
         </button>
@@ -149,10 +153,13 @@ function IsiForm({ namaLokasi, onSelesai }: { namaLokasi: string; onSelesai: () 
         />
       </div>
 
-      <div className="flex justify-end gap-3 border-t border-gray-100 pt-4">
-        <button type="button" onClick={onSelesai} className={btnSecondary}>Batal</button>
-        <button type="submit" disabled={pending} className={btnPrimary}>
-          {pending ? "Mengirim..." : "Kirim Pengajuan"}
+      {/* HP: 2 tombol lebar sama besar. Desktop: di kanan */}
+      <div className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-4 sm:flex sm:justify-end">
+        <button type="button" onClick={onSelesai} className={`${btnSecondary} justify-center`}>
+          Batal
+        </button>
+        <button type="submit" disabled={pending} className={`${btnPrimary} justify-center`}>
+          {pending ? "Mengirim..." : "Kirim"}
         </button>
       </div>
     </form>

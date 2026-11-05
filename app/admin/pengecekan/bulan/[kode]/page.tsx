@@ -7,7 +7,7 @@ import PageHeader from "@/components/admin/PageHeader";
 import EmptyState from "@/components/admin/EmptyState";
 import SelectFilter from "@/components/admin/SelectFilter";
 import KartuKondisi from "@/components/admin/pengecekan/KartuKondisi";
-import { btnPrimary, btnSecondary, inputClass } from "@/components/admin/ui";
+import { btnPrimary, btnSecondary, inputClass, labelClass } from "@/components/admin/ui";
 import { fmtAngka, fmtBulan, fmtTanggalPendek, kodeBulan, parseBulan, rentangBulan } from "@/lib/format";
 
 const OPSI_STATUS = [
@@ -33,6 +33,7 @@ export default async function PengecekanBulanPage({
   const q = (sp.q ?? "").trim();
   const status = sp.status === "belum" || sp.status === "selesai" ? sp.status : "";
   const dasar = `/admin/pengecekan/bulan/${kode}`;
+  const adaFilter = Boolean(q || status);
 
   const rentang = rentangBulan(awal);
 
@@ -75,11 +76,15 @@ export default async function PengecekanBulanPage({
   });
 
   return (
-    <div>
+    <div className="min-w-0">
       <PageHeader
         judul={`Pengecekan ${fmtBulan(awal)}`}
         deskripsi={`${ta ? `Tahun Ajaran ${ta.nama} · ` : ""}Pilih lokasi untuk mulai mengecek atau melihat hasilnya.`}
-        aksi={<Link href={kembali} className={btnSecondary}>Kembali</Link>}
+        aksi={
+          <Link href={kembali} className={`${btnSecondary} justify-center`}>
+            ← Kembali
+          </Link>
+        }
       />
 
       {/* Ringkasan kondisi bulan ini */}
@@ -89,25 +94,69 @@ export default async function PengecekanBulanPage({
       <section className="mb-4 rounded-3xl border border-green-100 bg-white p-4 shadow-sm">
         <div className="mb-1 flex justify-between text-sm">
           <span className="text-gray-500">Lokasi selesai dicek</span>
-          <b className="text-gray-900">{selesai} / {lokasiBerbarang.length}</b>
+          <b className="text-gray-900">
+            {selesai} / {lokasiBerbarang.length}
+          </b>
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-gray-100">
           <div className="h-full rounded-full bg-green-600" style={{ width: `${persen}%` }} />
         </div>
       </section>
 
-      {/* Cari & filter */}
-      <form key={`${q}|${status}`} action={dasar} className="mb-4 flex flex-wrap gap-3">
-        <input
-          name="q"
-          type="search"
-          defaultValue={q}
-          placeholder="Cari lokasi atau penanggung jawab..."
-          className={`${inputClass} sm:max-w-sm`}
-        />
-        <SelectFilter name="status" label="Filter status" defaultValue={status} opsi={OPSI_STATUS} className="w-full sm:w-48" />
-        <button type="submit" className={btnSecondary}>Terapkan</button>
-        {(q || status) && <Link href={dasar} className={btnSecondary}>Reset</Link>}
+      {/* ===== Pencarian & Filter =====
+          HP     : kartu dengan judul, kolom tersusun ke bawah + label
+          Desktop: satu baris tanpa kartu */}
+      <form
+        key={`${q}|${status}`}
+        action={dasar}
+        className="relative z-20 mb-4 rounded-3xl border border-green-100 bg-white shadow-sm md:rounded-none md:border-0 md:bg-transparent md:shadow-none"
+      >
+        <div className="flex items-center gap-2 rounded-t-3xl border-b border-green-100 bg-green-50/60 px-4 py-3 md:hidden">
+          <svg viewBox="0 0 24 24" className="size-5 text-green-700" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 4h18l-7 8.5V19l-4 2v-8.5L3 4z" />
+          </svg>
+          <h2 className="font-semibold text-gray-900">Pencarian &amp; Filter</h2>
+        </div>
+
+        <div className="flex flex-col gap-4 p-4 md:flex-row md:flex-wrap md:items-center md:gap-3 md:p-0">
+          <div className="flex flex-col gap-2 md:w-full md:max-w-sm">
+            <p className={`${labelClass} md:hidden`}>Cari Lokasi</p>
+            <div className="relative">
+              <svg viewBox="0 0 24 24" className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                <circle cx="11" cy="11" r="7" />
+                <path d="M20 20l-3.5-3.5" />
+              </svg>
+              <input
+                name="q"
+                type="search"
+                defaultValue={q}
+                placeholder="Cari lokasi atau penanggung jawab..."
+                className={`${inputClass} pl-10`}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <p className={`${labelClass} md:hidden`}>Status</p>
+            <SelectFilter name="status" label="Filter status" defaultValue={status} opsi={OPSI_STATUS} className="w-full md:w-48" />
+          </div>
+
+          <div className={`grid gap-2 md:flex md:gap-3 ${adaFilter ? "grid-cols-2" : "grid-cols-1"}`}>
+            <button type="submit" className={`${btnPrimary} justify-center md:hidden`}>
+              Terapkan
+            </button>
+            <div className="hidden md:block">
+              <button type="submit" className={btnSecondary}>
+                Terapkan
+              </button>
+            </div>
+            {adaFilter && (
+              <Link href={dasar} className={`${btnSecondary} justify-center`}>
+                Reset
+              </Link>
+            )}
+          </div>
+        </div>
       </form>
 
       {lokasiList.length === 0 ? (
@@ -127,13 +176,13 @@ export default async function PengecekanBulanPage({
             return (
               <div
                 key={l.id}
-                className={`flex flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm ${
+                className={`flex min-w-0 flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm ${
                   cek ? "border-green-200" : "border-gray-200"
                 }`}
               >
-                <div>
-                  <p className="font-semibold text-gray-900">{l.nama}</p>
-                  <p className="text-xs text-gray-500">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-gray-900">{l.nama}</p>
+                  <p className="truncate text-xs text-gray-500">
                     PJ: {l.penanggungJawab ?? "–"} · {fmtAngka(l._count.barang)} barang
                   </p>
                 </div>
@@ -162,7 +211,7 @@ export default async function PengecekanBulanPage({
                 {!kosong && (
                   <Link
                     href={`/admin/pengecekan/lokasi/${l.id}?bulan=${kode}`}
-                    className={`mt-auto ${cek ? btnSecondary : btnPrimary} h-10`}
+                    className={`mt-auto ${cek ? btnSecondary : btnPrimary} h-11 justify-center`}
                   >
                     {cek ? "Lihat / Edit" : "Mulai cek"}
                   </Link>

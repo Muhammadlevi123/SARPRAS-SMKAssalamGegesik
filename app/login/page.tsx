@@ -2,8 +2,7 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import LoginForm from "@/components/login/loginForm";
 import WaveEdge from "@/components/login/waveEdge";
-import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
+import { berandaUntuk, userDariSesi } from "@/lib/auth";
 
 const LINKS = {
   facebook: "https://www.facebook.com/smkassalamgegesik2003",
@@ -43,17 +42,11 @@ function Sosmed({ dark = false }: { dark?: boolean }) {
 }
 
 export default async function LoginPage() {
-  // Sudah login DAN akunnya masih ada di database → langsung ke panel admin.
-  // Kalau cookie masih ada tapi akunnya sudah dihapus, form tetap ditampilkan
+    // Sudah login dengan sesi yang masih berlaku → langsung ke panel admin.
+  // Sesi dicabut / akun dihapus / menunggu persetujuan → form tetap ditampilkan
   // (mencegah redirect bolak-balik antara /login dan /admin).
-  const session = await getSession();
-  if (session) {
-    const user = await prisma.user.findUnique({
-      where: { id: session.userId },
-      select: { id: true },
-    });
-    if (user) redirect("/admin");
-  }
+    const user = await userDariSesi();
+  if (user) redirect(berandaUntuk(user.role)); // sudah login → ke berandanya masing-masing
 
   return (
     <div className="flex min-h-screen flex-col bg-white md:flex-row">
@@ -125,7 +118,7 @@ export default async function LoginPage() {
               Masuk ke Akun
             </h2>
             <p className="mt-3 text-base text-gray-500">
-              Gunakan username dan password yang telah didaftarkan
+                            Gunakan email dan password yang telah didaftarkan
             </p>
           </div>
           <LoginForm />

@@ -31,9 +31,11 @@ export default function Toaster() {
   const tutup = (id: number) => setDaftar((d) => d.filter((n) => n.id !== id));
 
   return (
+    // HP: selebar layar (jarak 16px kiri-kanan) + jarak aman dari poni/status bar.
+    // Layar lebar: kanan atas, lebar maks 384px
     <div
       aria-live="polite"
-      className="pointer-events-none fixed right-4 top-4 z-[70] flex w-[calc(100%-2rem)] max-w-sm flex-col gap-2 print:hidden"
+      className="pointer-events-none fixed inset-x-4 top-[max(1rem,env(safe-area-inset-top))] z-70 flex flex-col gap-2 sm:left-auto sm:w-full sm:max-w-sm print:hidden"
     >
       {daftar.map((n) => (
         <div
@@ -52,15 +54,15 @@ export default function Toaster() {
               <path d={n.jenis === "sukses" ? "M5 12l5 5L19 7" : "M6 6l12 12M18 6L6 18"} />
             </svg>
           </span>
-          <div className="flex-1">
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-bold text-gray-900">{n.jenis === "sukses" ? "Berhasil" : "Gagal"}</p>
-            <p className="text-sm text-gray-600">{n.pesan}</p>
+            <p className="break-words text-sm text-gray-600">{n.pesan}</p>
           </div>
           <button
             type="button"
             onClick={() => tutup(n.id)}
             aria-label="Tutup notifikasi"
-            className="text-gray-400 hover:text-gray-700"
+            className="-m-1 grid size-7 shrink-0 place-items-center rounded-md text-gray-400 hover:text-gray-700 active:bg-gray-100"
           >
             <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M6 6l12 12M18 6L6 18" />

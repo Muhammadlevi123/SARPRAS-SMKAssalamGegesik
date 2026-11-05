@@ -10,13 +10,14 @@ export default function KartuKondisi({ rekap, judul }: { rekap: RekapKondisi; ju
   ];
 
   return (
-    <section className="mb-5">
+    <section className="mb-4 sm:mb-5">
       {judul && <p className="mb-2 text-sm font-semibold text-gray-500">{judul}</p>}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {/* HP: 2×2 ringkas. Layar lebar: 4 sejajar */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
         {kartu.map((k) => (
-          <div key={k.label} className={`rounded-2xl px-4 py-3 ${k.cls}`}>
-            <p className="text-2xl font-bold">{fmtAngka(k.nilai)}</p>
-            <p className="text-xs font-semibold">{k.label}</p>
+          <div key={k.label} className={`min-w-0 rounded-2xl px-3 py-2.5 sm:px-4 sm:py-3 ${k.cls}`}>
+            <p className="truncate text-xl font-bold sm:text-2xl">{fmtAngka(k.nilai)}</p>
+            <p className="truncate text-xs font-semibold">{k.label}</p>
           </div>
         ))}
       </div>

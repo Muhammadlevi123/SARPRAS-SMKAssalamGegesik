@@ -223,13 +223,13 @@ export default function BarangMasukForm({
   const labelKecil = "text-xs font-semibold text-gray-500";
 
   return (
-    <form action={formAction} className="flex flex-col gap-5">
+    <form action={formAction} className="flex min-w-0 flex-col gap-4 sm:gap-5">
       {state.error && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{state.error}</div>
       )}
 
       {/* ===== Data Nota (lebar penuh) ===== */}
-      <section className="rounded-3xl border border-green-100 bg-white p-5 shadow-sm">
+      <section className="min-w-0 rounded-3xl border border-green-100 bg-white p-4 shadow-sm sm:p-5">
         <h3 className="mb-4 font-semibold text-gray-900">Data Nota</h3>
 
         <div className="flex flex-col gap-4">
@@ -242,7 +242,7 @@ export default function BarangMasukForm({
                   className={`cursor-pointer rounded-xl border px-3 py-2.5 text-center text-sm font-semibold transition ${
                     sumber === s
                       ? "border-green-600 bg-green-50 text-green-800 ring-2 ring-green-500/20"
-                      : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                      : "border-gray-200 text-gray-600 hover:bg-gray-50 active:bg-gray-50"
                   }`}
                 >
                   <input
@@ -260,7 +260,7 @@ export default function BarangMasukForm({
           </fieldset>
 
           <div className={`grid gap-4 ${barangLama ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
-            <div className="flex flex-col gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <label htmlFor="tanggal" className={labelClass}>Tanggal</label>
               <input
                 id="tanggal"
@@ -275,7 +275,7 @@ export default function BarangMasukForm({
 
             {/* Barang Lama tidak punya dokumen penerimaan */}
             {!barangLama && (
-              <div className="flex flex-col gap-2">
+              <div className="flex min-w-0 flex-col gap-2">
                 <label htmlFor="noNota" className={labelClass}>
                   {pembelian ? "No. Nota" : "No. Dokumen / BAST"} {opsional}
                 </label>
@@ -290,7 +290,7 @@ export default function BarangMasukForm({
               </div>
             )}
 
-            <div className="flex flex-col gap-2">
+            <div className="flex min-w-0 flex-col gap-2">
               <label htmlFor="keterangan" className={labelClass}>Keterangan {opsional}</label>
               <input
                 id="keterangan"
@@ -304,7 +304,7 @@ export default function BarangMasukForm({
           </div>
 
           {butuhMitra && (
-            <div className="flex flex-col gap-2 md:max-w-md">
+            <div className="flex min-w-0 flex-col gap-2 md:max-w-md">
               <label htmlFor="mitraId" className={labelClass}>
                 Mitra {sumber === "BANTUAN" && opsional}
               </label>
@@ -325,27 +325,31 @@ export default function BarangMasukForm({
 
           {/* Foto nota: hanya untuk Pembelian */}
           {pembelian && (
-            <div className="flex flex-col gap-2 md:max-w-md">
+            <div className="flex min-w-0 flex-col gap-2 md:max-w-md">
               <span className={labelClass}>Foto nota {opsional}</span>
               {foto ? (
                 <div className="flex items-center gap-3 rounded-2xl border border-green-100 bg-green-50/40 p-2.5">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={foto.url} alt="Pratinjau foto nota" className="size-14 rounded-xl object-cover" />
-                  <div className="flex-1 text-sm">
+                  <img src={foto.url} alt="Pratinjau foto nota" className="size-14 shrink-0 rounded-xl object-cover" />
+                  <div className="min-w-0 flex-1 text-sm">
                     <p className="font-semibold text-gray-800">Foto siap diunggah</p>
                     <p className="text-xs text-gray-500">Sudah dikecilkan: {ukuranKB(foto.ukuran)}</p>
                   </div>
-                  <button type="button" onClick={hapusFoto} className="px-2 text-sm font-semibold text-red-600 hover:underline">
+                  <button
+                    type="button"
+                    onClick={hapusFoto}
+                    className="shrink-0 rounded-lg px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 active:bg-red-50"
+                  >
                     Hapus
                   </button>
                 </div>
               ) : (
-                <label className="flex cursor-pointer items-center gap-3 rounded-2xl border-2 border-dashed border-green-200 bg-green-50/30 px-4 py-3 transition hover:bg-green-50">
+                <label className="flex cursor-pointer items-center gap-3 rounded-2xl border-2 border-dashed border-green-200 bg-green-50/30 px-4 py-3 transition hover:bg-green-50 active:bg-green-50">
                   <svg viewBox="0 0 24 24" className="size-6 shrink-0 text-green-600" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M4 7h3l2-3h6l2 3h3v13H4z" />
                     <path d="M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
                   </svg>
-                  <span className="text-sm">
+                  <span className="min-w-0 text-sm">
                     <span className="font-semibold text-gray-700">
                       {prosesFoto ? "Memproses foto..." : "Pilih / ambil foto nota"}
                     </span>
@@ -366,8 +370,8 @@ export default function BarangMasukForm({
         </div>
       </section>
 
-      {/* ===== Daftar Barang: kartu kecil berjajar ke samping ===== */}
-      <section className="rounded-3xl border border-green-100 bg-white p-5 shadow-sm">
+      {/* ===== Daftar Barang: HP 1 kolom, layar lebar berjajar ===== */}
+      <section className="min-w-0 rounded-3xl border border-green-100 bg-white p-4 shadow-sm sm:p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-semibold text-gray-900">Daftar Barang ({baris.length})</h3>
           {pembelian && (
@@ -382,7 +386,7 @@ export default function BarangMasukForm({
             const satuan = satuanBaris(b);
             const kodeBaru = pratinjauKode(b, i);
             return (
-              <div key={b.key} className="flex flex-col gap-2 rounded-2xl border border-gray-200 bg-gray-50/50 p-3">
+              <div key={b.key} className="flex min-w-0 flex-col gap-2 rounded-2xl border border-gray-200 bg-gray-50/50 p-3">
                 {/* Kepala kartu */}
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wide text-green-800">Barang #{i + 1}</span>
@@ -392,7 +396,7 @@ export default function BarangMasukForm({
                     disabled={baris.length === 1}
                     aria-label={`Hapus barang #${i + 1}`}
                     title="Hapus"
-                    className="grid size-7 place-items-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-600 disabled:invisible"
+                    className="grid size-8 place-items-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-600 active:bg-red-50 disabled:invisible"
                   >
                     <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                       <path d="M6 6l12 12M18 6L6 18" />
@@ -460,7 +464,7 @@ export default function BarangMasukForm({
                     />
 
                     {/* Pratinjau kode barang (otomatis, readonly) */}
-                    <p className="rounded-lg bg-white px-2.5 py-1.5 text-xs text-gray-500 ring-1 ring-gray-200">
+                    <p className="truncate rounded-lg bg-white px-2.5 py-1.5 text-xs text-gray-500 ring-1 ring-gray-200">
                       Kode:{" "}
                       {kodeBaru ? (
                         <b className="font-mono text-gray-800">{kodeBaru}</b>
@@ -471,15 +475,16 @@ export default function BarangMasukForm({
                   </>
                 )}
 
-                {/* Jumlah & harga */}
+                {/* Jumlah & harga (keyboard angka di HP) */}
                 <div className={`grid gap-2 ${pembelian ? "grid-cols-2" : ""}`}>
-                  <div className="flex flex-col gap-1">
-                    <label htmlFor={`jumlah-${b.key}`} className={labelKecil}>
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <label htmlFor={`jumlah-${b.key}`} className={`${labelKecil} truncate`}>
                       Jumlah{satuan ? ` (${satuan})` : ""}
                     </label>
                     <input
                       id={`jumlah-${b.key}`}
                       type="number"
+                      inputMode="numeric"
                       min={1}
                       required
                       value={b.jumlah}
@@ -488,11 +493,12 @@ export default function BarangMasukForm({
                     />
                   </div>
                   {pembelian && (
-                    <div className="flex flex-col gap-1">
+                    <div className="flex min-w-0 flex-col gap-1">
                       <label htmlFor={`harga-${b.key}`} className={labelKecil}>Harga satuan</label>
                       <input
                         id={`harga-${b.key}`}
                         type="number"
+                        inputMode="numeric"
                         min={0}
                         required
                         value={b.harga}
@@ -509,12 +515,12 @@ export default function BarangMasukForm({
                   <button
                     type="button"
                     onClick={() => ubah(b.key, { mode: b.mode === "ada" ? "baru" : "ada" })}
-                    className="text-xs font-semibold text-green-700 hover:underline"
+                    className="-ml-2 rounded-lg px-2 py-1.5 text-xs font-semibold text-green-700 hover:bg-green-50 active:bg-green-50"
                   >
                     {b.mode === "ada" ? "+ Barang baru" : "← Barang terdaftar"}
                   </button>
                   {pembelian && subtotal(b) > 0 && (
-                    <span className="text-xs font-semibold text-gray-700">{fmtRupiah(subtotal(b))}</span>
+                    <span className="truncate text-xs font-semibold text-gray-700">{fmtRupiah(subtotal(b))}</span>
                   )}
                 </div>
               </div>
@@ -525,7 +531,7 @@ export default function BarangMasukForm({
           <button
             type="button"
             onClick={() => setBaris((bs) => [...bs, barisKosong()])}
-            className="flex min-h-40 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-green-200 text-sm font-semibold text-green-700 transition hover:bg-green-50"
+            className="flex min-h-24 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-green-200 text-sm font-semibold text-green-700 transition hover:bg-green-50 active:bg-green-50 sm:min-h-40"
           >
             <span className="text-2xl leading-none">+</span>
             Tambah barang
@@ -535,19 +541,19 @@ export default function BarangMasukForm({
 
       {/* ===== Biaya lain-lain & Total (khusus Pembelian) ===== */}
       {pembelian && (
-        <section className="grid gap-5 rounded-3xl border border-green-100 bg-white p-5 shadow-sm lg:grid-cols-[minmax(0,1fr)_20rem]">
-          <div>
-            <div className="mb-3 flex items-center justify-between">
-              <div>
+        <section className="grid min-w-0 gap-5 rounded-3xl border border-green-100 bg-white p-4 shadow-sm sm:p-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="min-w-0">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div className="min-w-0">
                 <h3 className="font-semibold text-gray-900">Biaya lain-lain</h3>
                 <p className="text-xs text-gray-500">Ongkir, biaya layanan, diskon, dll. Pilih − untuk potongan.</p>
               </div>
               <button
                 type="button"
                 onClick={() => setBiaya((bs) => [...bs, biayaKosong()])}
-                className="rounded-xl px-3 py-2 text-sm font-semibold text-green-700 transition hover:bg-green-50"
+                className="shrink-0 rounded-xl px-3 py-2 text-sm font-semibold text-green-700 transition hover:bg-green-50 active:bg-green-50"
               >
-                + Tambah biaya
+                + Tambah
               </button>
             </div>
 
@@ -558,18 +564,40 @@ export default function BarangMasukForm({
             ) : (
               <ul className="flex flex-col gap-2">
                 {biaya.map((b, i) => (
-                  <li key={b.key} className="grid items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto_9rem_2.25rem]">
-                    <Combobox
-                      id={`biaya-nama-${b.key}`}
-                      name={`x-biaya-${b.key}`}
-                      value={b.nama}
-                      onChange={(v) => ubahBiaya(b.key, { nama: v })}
-                      opsi={namaBiayaList}
-                      placeholder={`Biaya #${i + 1}, misal Ongkos kirim`}
-                      required
-                    />
+                  /* HP: kotak 2 baris → [nama biaya][✕] / [+ −][nominal]
+                     Desktop: 1 baris → [nama][+ −][nominal][✕] */
+                  <li
+                    key={b.key}
+                    className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_2.25rem] items-center gap-2 rounded-2xl border border-gray-200 bg-gray-50/50 p-2 sm:grid-cols-[minmax(0,1fr)_auto_9rem_2.25rem] sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0"
+                  >
+                    {/* Nama biaya */}
+                    <div className="order-1 col-span-2 min-w-0 sm:col-span-1">
+                      <Combobox
+                        id={`biaya-nama-${b.key}`}
+                        name={`x-biaya-${b.key}`}
+                        value={b.nama}
+                        onChange={(v) => ubahBiaya(b.key, { nama: v })}
+                        opsi={namaBiayaList}
+                        placeholder={`Biaya #${i + 1}, misal Ongkos kirim`}
+                        required
+                      />
+                    </div>
+
+                    {/* Hapus */}
+                    <button
+                      type="button"
+                      onClick={() => setBiaya((bs) => bs.filter((x) => x.key !== b.key))}
+                      aria-label={`Hapus biaya #${i + 1}`}
+                      title="Hapus"
+                      className="order-2 grid size-9 place-items-center justify-self-end rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-600 active:bg-red-50 sm:order-4"
+                    >
+                      <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <path d="M6 6l12 12M18 6L6 18" />
+                      </svg>
+                    </button>
+
                     {/* Tambahan atau potongan */}
-                    <div className="flex h-11 rounded-xl border border-gray-200 bg-white p-0.5 text-sm font-bold">
+                    <div className="order-3 flex h-11 rounded-xl border border-gray-200 bg-white p-0.5 text-sm font-bold sm:order-2">
                       {(["+", "-"] as const).map((t) => (
                         <button
                           key={t}
@@ -589,27 +617,21 @@ export default function BarangMasukForm({
                         </button>
                       ))}
                     </div>
-                    <input
-                      aria-label={`Nominal biaya #${i + 1}`}
-                      type="number"
-                      min={1}
-                      required
-                      value={b.nominal}
-                      onChange={(e) => ubahBiaya(b.key, { nominal: e.target.value })}
-                      placeholder="Rp"
-                      className={inputClass}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setBiaya((bs) => bs.filter((x) => x.key !== b.key))}
-                      aria-label={`Hapus biaya #${i + 1}`}
-                      title="Hapus"
-                      className="grid size-9 place-items-center justify-self-end rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-600"
-                    >
-                      <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                        <path d="M6 6l12 12M18 6L6 18" />
-                      </svg>
-                    </button>
+
+                    {/* Nominal */}
+                    <div className="order-4 col-span-2 min-w-0 sm:order-3 sm:col-span-1">
+                      <input
+                        aria-label={`Nominal biaya #${i + 1}`}
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
+                        required
+                        value={b.nominal}
+                        onChange={(e) => ubahBiaya(b.key, { nominal: e.target.value })}
+                        placeholder="Rp"
+                        className={inputClass}
+                      />
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -618,29 +640,42 @@ export default function BarangMasukForm({
 
           {/* Ringkasan total */}
           <dl className="h-fit rounded-2xl bg-green-50/60 p-4 text-sm">
-            <div className="flex justify-between py-1">
+            <div className="flex justify-between gap-3 py-1">
               <dt className="text-gray-600">Subtotal barang</dt>
-              <dd className="font-semibold text-gray-900">{fmtRupiah(subtotalBarang)}</dd>
+              <dd className="shrink-0 font-semibold text-gray-900">{fmtRupiah(subtotalBarang)}</dd>
             </div>
-            <div className="flex justify-between py-1">
+            <div className="flex justify-between gap-3 py-1">
               <dt className="text-gray-600">Biaya lain-lain</dt>
-              <dd className={`font-semibold ${totalBiaya < 0 ? "text-red-600" : "text-gray-900"}`}>
+              <dd className={`shrink-0 font-semibold ${totalBiaya < 0 ? "text-red-600" : "text-gray-900"}`}>
                 {totalBiaya < 0 ? `−${fmtRupiah(-totalBiaya)}` : fmtRupiah(totalBiaya)}
               </dd>
             </div>
-            <div className="mt-2 flex justify-between border-t border-green-200 pt-3 text-base">
+            <div className="mt-2 flex justify-between gap-3 border-t border-green-200 pt-3 text-base">
               <dt className="font-bold text-gray-900">Total pembayaran</dt>
-              <dd className="font-bold text-green-800">{fmtRupiah(totalBayar)}</dd>
+              <dd className="shrink-0 font-bold text-green-800">{fmtRupiah(totalBayar)}</dd>
             </div>
           </dl>
         </section>
       )}
 
-      <div className="flex justify-end gap-3">
-        <Link href="/admin/barang-masuk" className={btnSecondary}>Batal</Link>
-        <button type="submit" disabled={pending || prosesFoto} className={btnPrimary}>
-          {pending ? "Menyimpan..." : "Simpan Barang Masuk"}
-        </button>
+      {/* ===== Tombol simpan =====
+          HP     : bilah bawah yang menempel (total + Batal/Simpan), selalu terlihat saat scroll
+          Desktop: di kanan bawah seperti semula */}
+      <div className="sticky bottom-0 z-30 -mx-4 border-t border-green-100 bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+        {pembelian && (
+          <div className="mb-2 flex items-baseline justify-between gap-3 sm:hidden">
+            <span className="text-sm text-gray-500">Total pembayaran</span>
+            <b className="text-lg text-green-800">{fmtRupiah(totalBayar)}</b>
+          </div>
+        )}
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:justify-end">
+          <Link href="/admin/barang-masuk" className={`${btnSecondary} justify-center`}>
+            Batal
+          </Link>
+          <button type="submit" disabled={pending || prosesFoto} className={`${btnPrimary} justify-center`}>
+            {pending ? "Menyimpan..." : "Simpan"}
+          </button>
+        </div>
       </div>
     </form>
   );

@@ -23,14 +23,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         className="print-putih flex min-h-screen min-w-0 flex-1 flex-col"
         style={{ backgroundColor: BG_KONTEN }}
       >
-        <header className="border-b border-green-100 bg-white px-6 py-4 md:sticky md:top-0 md:z-20 md:px-8 print:hidden">
-          <h1 className="font-[family-name:var(--font-display)] text-xl font-bold text-gray-900 md:text-2xl">
+        {/* HP: ringkas. Desktop: menempel di atas saat di-scroll */}
+        <header className="border-b border-green-100 bg-white px-4 py-3 sm:px-6 sm:py-4 md:sticky md:top-0 md:z-20 md:px-8 print:hidden">
+          <h1 className="truncate font-[family-name:var(--font-display)] text-lg font-bold text-gray-900 sm:text-xl md:text-2xl">
             Selamat datang, {user.nama}!
           </h1>
-          <p className="text-sm text-gray-500">{hariIni}</p>
+          <p className="text-xs text-gray-500 sm:text-sm">{hariIni}</p>
         </header>
 
-        <main className="flex-1 p-6 md:p-8 print:p-0">{children}</main>
+        {/* Jarak tepi: HP 16px, tablet 24px, desktop 32px */}
+        <main className="flex-1 p-4 sm:p-6 md:p-8 print:p-0">{children}</main>
       </div>
 
       <Toaster />

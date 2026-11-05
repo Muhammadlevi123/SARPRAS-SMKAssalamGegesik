@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/auth";
+import { requireAdmin, requireUser } from "@/lib/auth";
 import { fmtBulan, kodeBulan, parseBulan, parseTanggal, rentangBulan } from "@/lib/format";
 import type { FormState } from "@/lib/formState";
 
@@ -17,10 +17,19 @@ function angka(v: unknown) {
   return Number.isInteger(n) && n >= 0 && n <= 1_000_000 ? n : null;
 }
 
-// ===== Periode (bulan) pengecekan =====
+// Segarkan halaman pengecekan admin & user setelah data berubah
+function segarkan(lokasiId: number) {
+  revalidatePath("/admin/pengecekan");
+  revalidatePath(`/admin/pengecekan/lokasi/${lokasiId}`);
+  revalidatePath("/admin");
+  revalidatePath("/user/pengecekan");
+  revalidatePath("/user");
+}
+
+// ===== Periode (bulan) pengecekan: KHUSUS ADMIN =====
 
 export async function tambahPeriode(_prev: FormState, formData: FormData): Promise<FormState> {
-  await requireUser();
+  await requireAdmin();
 
   // Kode bulan dari pilihan, misal "2026-10"
   const awal = parseBulan(teks(formData.get("bulan")));
@@ -40,11 +49,13 @@ export async function tambahPeriode(_prev: FormState, formData: FormData): Promi
   await prisma.periodePengecekan.create({ data: { bulan: awal } });
 
   revalidatePath("/admin/pengecekan");
+  revalidatePath("/user/pengecekan");
+  revalidatePath("/user");
   return { ok: true, pesan: `Pengecekan ${fmtBulan(awal)} ditambahkan. Klik Detail untuk mulai mengecek.` };
 }
 
 export async function hapusPeriode(_prev: FormState, formData: FormData): Promise<FormState> {
-  await requireUser();
+  await requireAdmin();
 
   const id = Number(formData.get("id"));
   if (!id) return { error: "Data tidak valid" };
@@ -60,13 +71,18 @@ export async function hapusPeriode(_prev: FormState, formData: FormData): Promis
   await prisma.periodePengecekan.delete({ where: { id } });
 
   revalidatePath("/admin/pengecekan");
+  revalidatePath("/user/pengecekan");
+  revalidatePath("/user");
   return { ok: true, pesan: `Pengecekan ${fmtBulan(periode.bulan)} dihapus dari daftar` };
 }
 
 // ===== Pengecekan per lokasi =====
+// ADMIN : semua lokasi, semua bulan
+// USER  : hanya lokasinya sendiri, hanya di bulan yang sudah dibuka admin
 
 export async function simpanPengecekan(_prev: FormState, formData: FormData): Promise<HasilSimpanCek> {
-  await requireUser();
+  const user = await requireUser();
+  const admin = user.role === "ADMIN";
 
   const id = Number(formData.get("id")) || 0; // 0 = pengecekan baru
   const lokasiId = Number(formData.get("lokasiId"));
@@ -75,6 +91,12 @@ export async function simpanPengecekan(_prev: FormState, formData: FormData): Pr
   const catatan = teks(formData.get("catatan")) || null;
 
   if (!Number.isInteger(lokasiId) || lokasiId <= 0) return { error: "Lokasi tidak valid" };
+
+  // USER tidak boleh menyimpan pengecekan lokasi lain (walaupun lokasiId di form diubah)
+  if (!admin && lokasiId !== user.lokasiId) {
+    return { error: "Anda hanya bisa mengecek lokasi Anda sendiri" };
+  }
+
   if (!tanggal) return { error: "Tanggal tidak valid" };
   if (!petugas) return { error: "Nama petugas wajib diisi" };
   if (petugas.length > 191 || (catatan?.length ?? 0) > 191) {
@@ -90,6 +112,14 @@ export async function simpanPengecekan(_prev: FormState, formData: FormData): Pr
   if (id) {
     const lama = await prisma.pengecekan.findUnique({ where: { id }, select: { lokasiId: true } });
     if (!lama || lama.lokasiId !== lokasiId) return { error: "Data pengecekan tidak valid" };
+  }
+
+  const awalBulan = rentangBulan(tanggal).gte;
+
+  // USER hanya bisa membuat pengecekan baru di bulan yang sudah dibuka admin
+  if (!admin && !id) {
+    const dibuka = await prisma.periodePengecekan.findUnique({ where: { bulan: awalBulan }, select: { id: true } });
+    if (!dibuka) return { error: `Admin belum membuka pengecekan bulan ${fmtBulan(tanggal)}` };
   }
 
   // Aturan: 1 lokasi 1x per bulan
@@ -146,8 +176,6 @@ export async function simpanPengecekan(_prev: FormState, formData: FormData): Pr
 
   if (items.length === 0) return { error: "Tidak ada barang yang dicek" };
 
-  const awalBulan = rentangBulan(tanggal).gte;
-
   await prisma.$transaction(async (tx) => {
     if (id) {
       await tx.pengecekan.update({ where: { id }, data: { tanggal, petugas, catatan } });
@@ -156,22 +184,35 @@ export async function simpanPengecekan(_prev: FormState, formData: FormData): Pr
     } else {
       await tx.pengecekan.create({ data: { lokasiId, tanggal, petugas, catatan, items: { create: items } } });
     }
-    // Pastikan bulannya tercatat di daftar (kalau belum ada)
-    await tx.periodePengecekan.upsert({ where: { bulan: awalBulan }, create: { bulan: awalBulan }, update: {} });
+    // ADMIN: pastikan bulannya tercatat di daftar (kalau belum ada).
+    // USER tidak perlu: bulannya pasti sudah dibuka admin (dicek di atas).
+    if (admin) {
+      await tx.periodePengecekan.upsert({ where: { bulan: awalBulan }, create: { bulan: awalBulan }, update: {} });
+    }
   });
 
-  revalidatePath("/admin/pengecekan");
-  revalidatePath(`/admin/pengecekan/lokasi/${lokasiId}`);
-  revalidatePath("/admin");
+  segarkan(lokasiId);
+
+  // Halaman tujuan setelah menyimpan
+  let kembali = `/admin/pengecekan/bulan/${kodeBulan(tanggal)}`;
+  if (!admin) {
+    const ta = await prisma.tahunAjaran.findFirst({
+      where: { mulai: { lte: tanggal }, selesai: { gte: awalBulan } },
+      select: { id: true },
+    });
+    kembali = ta ? `/user/pengecekan?ta=${ta.id}` : "/user/pengecekan";
+  }
+
   return {
     ok: true,
     pesan: id ? `Pengecekan ${lokasi.nama} diperbarui` : `Pengecekan ${lokasi.nama} tersimpan`,
-    kembali: `/admin/pengecekan/bulan/${kodeBulan(tanggal)}`,
+    kembali,
   };
 }
 
+// Hapus pengecekan: KHUSUS ADMIN
 export async function hapusPengecekan(_prev: FormState, formData: FormData): Promise<FormState> {
-  await requireUser();
+  await requireAdmin();
 
   const id = Number(formData.get("id"));
   if (!id) return { error: "Data tidak valid" };
@@ -181,8 +222,6 @@ export async function hapusPengecekan(_prev: FormState, formData: FormData): Pro
 
   await prisma.pengecekan.delete({ where: { id } }); // isinya ikut terhapus (Cascade)
 
-  revalidatePath("/admin/pengecekan");
-  revalidatePath(`/admin/pengecekan/lokasi/${cek.lokasiId}`);
-  revalidatePath("/admin");
+  segarkan(cek.lokasiId);
   redirect(`/admin/pengecekan/bulan/${kodeBulan(cek.tanggal)}`);
 }

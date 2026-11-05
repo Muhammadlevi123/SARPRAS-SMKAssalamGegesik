@@ -77,7 +77,7 @@ export default function Combobox({
   }
 
   return (
-    <div ref={wadahRef} className="relative">
+    <div ref={wadahRef} className="relative min-w-0">
       <input
         id={id}
         name={name}
@@ -129,7 +129,7 @@ export default function Combobox({
           if (buka) setBuka(false);
           else bukaDaftar();
         }}
-        className="absolute right-2 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-md text-gray-400 hover:text-gray-700"
+        className="absolute right-1.5 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-md text-gray-400 hover:text-gray-700 active:bg-gray-100"
       >
         <svg
           viewBox="0 0 24 24"
@@ -145,12 +145,13 @@ export default function Combobox({
       </button>
 
       {buka && (hasil.length > 0 || baru) && (
+        // z-40: di atas bilah bawah (Simpan) yang menempel di form HP
         <ul
           ref={listRef}
           id={listId}
           role="listbox"
           style={{ maxHeight: posisi.tinggi }}
-          className={`absolute z-30 w-full overflow-auto rounded-xl border border-green-100 bg-white shadow-lg [scrollbar-width:thin] ${
+          className={`absolute z-40 w-full overflow-auto overscroll-contain rounded-xl border border-green-100 bg-white shadow-lg [scrollbar-width:thin] ${
             posisi.keAtas ? "bottom-full mb-1" : "top-full mt-1"
           }`}
         >
@@ -164,20 +165,20 @@ export default function Combobox({
                 pilih(o);
               }}
               onMouseEnter={() => setAktif(i)}
-              className={`flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm ${
+              className={`flex cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm sm:py-2.5 ${
                 i === aktif ? "bg-green-50 text-green-800" : "text-gray-700"
               } ${o === value ? "font-semibold" : ""}`}
             >
-              {o}
+              <span className="min-w-0 truncate">{o}</span>
               {o === value && (
-                <svg viewBox="0 0 24 24" className="size-4 text-green-700" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg viewBox="0 0 24 24" className="size-4 shrink-0 text-green-700" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12l5 5L19 7" />
                 </svg>
               )}
             </li>
           ))}
           {baru && (
-            <li className="border-t border-gray-100 bg-gray-50 px-4 py-2.5 text-xs text-gray-500">
+            <li className="break-words border-t border-gray-100 bg-gray-50 px-4 py-2.5 text-xs text-gray-500">
               Akan disimpan sebagai baru: <b className="text-gray-800">{nilai}</b>
             </li>
           )}

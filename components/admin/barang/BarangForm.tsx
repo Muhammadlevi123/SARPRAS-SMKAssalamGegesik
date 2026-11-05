@@ -31,29 +31,56 @@ type Props = {
   merkList: string[];
 };
 
-export default function BarangForm(props: Props) {
+const IkonPensil = ({ className }: { className: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3z" />
+  </svg>
+);
+
+export default function BarangForm({
+  tampilan = "ikon",
+  ...props
+}: Props & {
+  tampilan?: "ikon" | "kartu"; // "kartu" = tombol Edit lebar (untuk HP)
+}) {
   const { barang, lokasiList } = props;
   const [buka, setBuka] = useState(false);
 
+  let tombol;
+  if (!barang) {
+    tombol = (
+      <button
+        type="button"
+        onClick={() => setBuka(true)}
+        disabled={lokasiList.length === 0}
+        title={lokasiList.length === 0 ? "Tambah lokasi dulu" : undefined}
+        className={`${btnPrimary} justify-center`}
+      >
+        + Tambah Barang
+      </button>
+    );
+  } else if (tampilan === "kartu") {
+    tombol = (
+      <button
+        type="button"
+        onClick={() => setBuka(true)}
+        className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 text-sm font-semibold text-green-700 active:bg-green-100"
+      >
+        <IkonPensil className="size-5" />
+        Edit
+      </button>
+    );
+  } else {
+    tombol = (
+      <button type="button" onClick={() => setBuka(true)} aria-label={`Edit ${barang.nama}`} title="Edit" className={btnIcon}>
+        <IkonPensil className="size-5" />
+      </button>
+    );
+  }
+
   return (
     <>
-      {barang ? (
-        <button type="button" onClick={() => setBuka(true)} aria-label={`Edit ${barang.nama}`} title="Edit" className={btnIcon}>
-          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3z" />
-          </svg>
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setBuka(true)}
-          disabled={lokasiList.length === 0}
-          title={lokasiList.length === 0 ? "Tambah lokasi dulu" : undefined}
-          className={btnPrimary}
-        >
-          + Tambah Barang
-        </button>
-      )}
+      {tombol}
 
       {buka && (
         <Modal judul={barang ? "Edit Barang" : "Tambah Barang"} onClose={() => setBuka(false)}>
@@ -136,7 +163,7 @@ function IsiForm({
           id={`${uid}-nama`}
           name="nama"
           required
-          autoFocus
+          autoFocus={!barang}
           value={nama}
           onChange={(e) => setNama(e.target.value)}
           placeholder="Contoh: Jangka Sorong 150x0,05"
@@ -146,7 +173,7 @@ function IsiForm({
 
       {/* Kode (readonly) & Merk */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2">
           <label htmlFor={`${uid}-kode`} className={labelClass}>Kode barang</label>
           <input
             id={`${uid}-kode`}
@@ -161,7 +188,7 @@ function IsiForm({
           )}
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2">
           <label htmlFor={`${uid}-merk`} className={labelClass}>Merk {opsional}</label>
           <Combobox
             id={`${uid}-merk`}
@@ -176,7 +203,7 @@ function IsiForm({
 
       {/* Kategori & Tahun perolehan */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2">
           <label htmlFor={`${uid}-kategori`} className={labelClass}>Kategori</label>
           <Combobox
             id={`${uid}-kategori`}
@@ -192,12 +219,13 @@ function IsiForm({
           />
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2">
           <label htmlFor={`${uid}-tahun`} className={labelClass}>Tahun perolehan</label>
           <input
             id={`${uid}-tahun`}
             name="tahun"
             type="number"
+            inputMode="numeric"
             required
             min={1990}
             max={tahunIni}
@@ -220,6 +248,7 @@ function IsiForm({
             required
             minLength={3}
             maxLength={3}
+            autoCapitalize="characters"
             value={kodeKategori}
             onChange={(e) => setKodeKategoriKetik(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))}
             className={`${inputClass} font-mono uppercase tracking-widest`}
@@ -239,7 +268,7 @@ function IsiForm({
 
       {/* Satuan & Lokasi */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2">
           <label htmlFor={`${uid}-satuan`} className={labelClass}>Satuan</label>
           <Combobox
             id={`${uid}-satuan`}
@@ -252,7 +281,7 @@ function IsiForm({
           />
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2">
           <label htmlFor={`${uid}-lokasi`} className={labelClass}>Lokasi</label>
           <Select
             id={`${uid}-lokasi`}
@@ -266,9 +295,12 @@ function IsiForm({
         </div>
       </div>
 
-      <div className="mt-2 flex justify-end gap-3">
-        <button type="button" onClick={onSelesai} className={btnSecondary}>Batal</button>
-        <button type="submit" disabled={pending} className={btnPrimary}>
+      {/* HP: 2 tombol lebar sama besar. Desktop: di kanan seperti semula */}
+      <div className="mt-2 grid grid-cols-2 gap-3 sm:flex sm:justify-end">
+        <button type="button" onClick={onSelesai} className={`${btnSecondary} justify-center`}>
+          Batal
+        </button>
+        <button type="submit" disabled={pending} className={`${btnPrimary} justify-center`}>
           {pending ? "Menyimpan..." : "Simpan"}
         </button>
       </div>

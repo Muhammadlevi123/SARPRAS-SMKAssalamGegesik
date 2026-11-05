@@ -22,7 +22,7 @@ export default function TombolCetakLabel({ lokasiList, kategoriList }: { lokasiL
 
   return (
     <>
-      <button type="button" onClick={() => setBuka(true)} className={btnSecondary}>
+      <button type="button" onClick={() => setBuka(true)} className={`${btnSecondary} justify-center`}>
         Cetak Label
       </button>
 
@@ -55,9 +55,14 @@ export default function TombolCetakLabel({ lokasiList, kategoriList }: { lokasiL
               Satu label untuk <b>setiap unit</b> barang (misal 30 kursi = 30 label). Kertas A4, 24 label per lembar.
             </p>
 
-            <div className="mt-2 flex justify-end gap-3">
-              <button type="button" onClick={() => setBuka(false)} className={btnSecondary}>Batal</button>
-              <button type="button" onClick={lanjut} className={btnPrimary}>Cetak</button>
+            {/* HP: 2 tombol lebar sama besar. Desktop: di kanan */}
+            <div className="mt-2 grid grid-cols-2 gap-3 sm:flex sm:justify-end">
+              <button type="button" onClick={() => setBuka(false)} className={`${btnSecondary} justify-center`}>
+                Batal
+              </button>
+              <button type="button" onClick={lanjut} className={`${btnPrimary} justify-center`}>
+                Cetak
+              </button>
             </div>
           </div>
         </Modal>

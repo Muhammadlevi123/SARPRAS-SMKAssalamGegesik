@@ -106,19 +106,24 @@ export default async function CekLokasiPage({
       : "pengecekan pertama";
 
   return (
-    <div>
+    <div className="min-w-0">
       <PageHeader
         judul={judul}
         deskripsi={`${fmtBulan(awal)} · PJ: ${lokasi.penanggungJawab ?? "–"} · ${keadaan}`}
         aksi={
-          <div className="flex items-center gap-2">
-            <Link href={kembali} className={btnSecondary}>Kembali</Link>
+          // HP: Kembali lebar (+ Hapus di kotak merah). Desktop: berdampingan
+          <div className={`grid w-full items-center gap-2 sm:flex sm:w-auto ${ada ? "grid-cols-[1fr_auto]" : "grid-cols-1"}`}>
+            <Link href={kembali} className={`${btnSecondary} justify-center`}>
+              ← Kembali
+            </Link>
             {ada && (
-              <TombolHapus
-                action={hapusPengecekan}
-                id={ada.id}
-                nama={`Pengecekan ${lokasi.nama} ${fmtBulan(awal)}`}
-              />
+              <div className="grid place-items-center rounded-xl border border-red-200 bg-red-50 px-1 sm:border-0 sm:bg-transparent sm:px-0">
+                <TombolHapus
+                  action={hapusPengecekan}
+                  id={ada.id}
+                  nama={`Pengecekan ${lokasi.nama} ${fmtBulan(awal)}`}
+                />
+              </div>
             )}
           </div>
         }
